@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -48,7 +50,9 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    // Compile for Java 17 with whatever JDK runs Gradle (Android Studio's bundled one).
+    // A jvmToolchain(17) would need a separate JDK 17 installed.
+    compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
 }
 
 ksp {
