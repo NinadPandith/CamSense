@@ -2,7 +2,7 @@
 import numpy as np
 import cv2
 
-from glint_core import BlobTracker, GlintConfig, bright_blobs
+from glint_core import BlobTracker, GlintConfig, ParallaxCheck, SceneMotion, bright_blobs
 
 
 def frame_with_spot(x, y, radius, size=(720, 1280)):
@@ -74,3 +74,39 @@ def test_spot_on_bright_wall_is_not_a_glint():
     img = np.full((720, 1280), 215, np.uint8)
     cv2.circle(img, (400, 300), 3, 255, -1)
     assert bright_blobs(img, GlintConfig()) == []
+
+
+def test_dot_on_a_lit_screen_is_skipped():
+    img = np.full((720, 1280), 35, np.uint8)
+    cv2.rectangle(img, (500, 200), (900, 500), 170, -1)   # lit tablet screen
+    cv2.circle(img, (700, 350), 3, 255, -1)               # bright dot on it
+    assert bright_blobs(img, GlintConfig()) == []
+
+
+def _pan_frames(n=20, step=6):
+    """A textured dark room panned right; a lens dot fixed to the scene and a glare
+    dot fixed in the frame (it follows the phone, like a reflection on glass)."""
+    rng = np.random.default_rng(1)
+    world = cv2.GaussianBlur((rng.random((800, 1600)) * 70).astype(np.uint8), (0, 0), 3)
+    for i in range(n):
+        frame = world[40:760, (200 - i * step):(200 - i * step) + 1280].copy()  # scene moves right
+        lens_x = 400 + i * step
+        cv2.circle(frame, (lens_x, 300), 3, 245, -1)  # lens: moves with the scene
+        cv2.circle(frame, (900, 400), 3, 250, -1)     # glare: stays put
+        yield frame
+
+
+def test_angle_test_keeps_the_lens_and_drops_glare():
+    cfg = GlintConfig()
+    tracker, motion, parallax = BlobTracker(cfg), SceneMotion(), ParallaxCheck()
+    verdicts = {}
+    for frame in _pan_frames():
+        sdx, sdy = motion.update(frame)
+        tracker.update(bright_blobs(frame, cfg))
+        for t in tracker.tracks:
+            if t.missed == 0:
+                verdicts[t.id] = (t.x, parallax.update(t.id, t.x, t.y, sdx, sdy))
+    lens = [v for x, v in verdicts.values() if x < 0.6]
+    glare = [v for x, v in verdicts.values() if abs(x - 900 / 1280) < 0.01]
+    assert lens and lens[-1] == "attached", verdicts
+    assert glare and glare[-1] == "reflection", verdicts

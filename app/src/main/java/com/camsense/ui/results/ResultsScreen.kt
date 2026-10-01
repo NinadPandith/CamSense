@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -152,7 +153,7 @@ fun ResultsScreen(
     }
 
     state.findings.firstOrNull { it.id == openFinding }?.let { f ->
-        FindingSheet(f, readOnly, onVerdict = { v -> vm.setVerdict(f.id, v); openFinding = null }, onDismiss = { openFinding = null })
+        FindingSheet(f, readOnly, onVerdict = { v -> vm.setVerdict(f.ids, v); openFinding = null }, onDismiss = { openFinding = null })
     }
     if (confirmDelete) {
         ConfirmDialog(
@@ -206,6 +207,10 @@ private fun FindingRow(f: FindingUi, onClick: () -> Unit) {
             modifier = Modifier.size(24.dp))
         Column(Modifier.weight(1f)) {
             Text(f.reason, style = CamSenseType.Body, color = CamSenseColors.Text)
+            if (f.count > 1) {
+                Text(pluralStringResource(R.plurals.results_group_count, f.count, f.count),
+                    style = CamSenseType.Caption, color = CamSenseColors.TextMuted)
+            }
             when (f.verdict) {
                 UserVerdict.CHECKED_OK -> Text(stringResource(R.string.verdict_badge_checked), style = CamSenseType.Caption, color = CamSenseColors.TextMuted)
                 UserVerdict.CONFIRMED -> Text(stringResource(R.string.verdict_badge_confirmed), style = CamSenseType.Caption, color = CamSenseColors.HighText)

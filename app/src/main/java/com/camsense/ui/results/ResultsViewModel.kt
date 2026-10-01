@@ -26,6 +26,9 @@ data class FindingUi(
     val snapshot: File?,
     /** Technical values for the detail sheet only (IP, ports, banner). */
     val technical: String?,
+    /** Every finding in this row (identical findings are grouped). */
+    val ids: List<String> = listOf(id),
+    val count: Int = 1,
 )
 
 data class SkippedUi(val module: ModuleId, val skipReason: String?)
@@ -49,8 +52,9 @@ class ResultsViewModel(private val container: AppContainer, private val scanId: 
         .map { it?.toUi() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun setVerdict(findingId: String, verdict: UserVerdict) {
-        viewModelScope.launch { container.repository.setVerdict(findingId, verdict) }
+    /** Marks every finding in a grouped row. */
+    fun setVerdict(findingIds: List<String>, verdict: UserVerdict) {
+        viewModelScope.launch { findingIds.forEach { container.repository.setVerdict(it, verdict) } }
     }
 
     /** Writes report.json and hashes every file. Storage full -> onError, Results stays open. */
@@ -94,7 +98,7 @@ class ResultsViewModel(private val container: AppContainer, private val scanId: 
                 }
             }
             FindingUi(f.id, module, f.reason, f.confidence, f.userVerdict, snap, technical)
-        }.sortedByDescending { it.confidence }
+        }.let(FindingGroups::group)
 
         return ResultsUi(
             scanId = scan.id,

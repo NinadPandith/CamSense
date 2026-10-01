@@ -16,6 +16,7 @@ import com.camsense.core.camera.FrameOps
 import com.camsense.core.camera.FrameStats
 import com.camsense.core.camera.FrameStatsMeter
 import com.camsense.core.camera.MotionMeter
+import com.camsense.core.camera.SceneMotion
 import com.camsense.data.EvidenceStore
 import com.camsense.modules.objects.ObjectsModule
 import com.camsense.scoring.ScanConfig
@@ -34,7 +35,10 @@ import org.opencv.core.Mat
  * 3. Flash-blink test: for each confirmed spot the torch goes off for ~0.3 s. A lens
  *    reflection vanishes with it (confidence raised); a lamp or LED stays lit
  *    (finding dropped).
- * 4. Links the glint to the AI object it sits in, for the agreement bonus, and saves
+ * 4. Angle test: as the phone moves, a lens shifts with the scene; a reflection on
+ *    flat glass (a lit tablet or TV screen) slides across it and is dropped, even if
+ *    it passed the flash test.
+ * 5. Links the glint to the AI object it sits in, for the agreement bonus, and saves
  *    a snapshot.
  */
 class GlintModule(
@@ -69,12 +73,15 @@ class GlintModule(
         ScanConfig.FLASH_LENS_RATIO, ScanConfig.FLASH_LIGHT_RATIO,
     )
     private val motion = MotionMeter(ScanConfig.MOTION_FRAME_SIZE)
+    private val sceneMotion = SceneMotion(ScanConfig.SCENE_MOTION_WIDTH)
+    private val parallax = ParallaxCheck(ScanConfig.PARALLAX_MIN_SCENE_MOTION, ScanConfig.PARALLAX_MAX_RATIO)
     private val meter = FrameStatsMeter()
     private val findingsByKey = linkedMapOf<String, Finding>()
     private val keyByTrack = mutableMapOf<Int, String>()
     private val flashQueue = ArrayDeque<Int>()
     private var flashTrack: BlobTracker.Track? = null
-    private val lightSourceTracks = mutableSetOf<Int>()
+    /** Tracks judged to be a lamp/LED (flash test) or a sliding reflection (angle test). */
+    private val rejectedTracks = mutableSetOf<Int>()
     private val lensKeys = mutableSetOf<String>()
     private var glintCount = 0
     private var frameCount = 0L
@@ -85,6 +92,8 @@ class GlintModule(
         if (results.value.status == ModuleResult.Status.RUNNING) return
         tracker.reset()
         motion.reset()
+        sceneMotion.reset()
+        parallax.reset()
         markRunning()
     }
 
@@ -135,7 +144,10 @@ class GlintModule(
         if (flash.active && testing != null) {
             val step = flash.onFrame(FrameOps.peakAround(gray, testing.x, testing.y, ScanConfig.FLASH_SAMPLE_RADIUS_PX))
             step.torch?.let { torch?.invoke(it == FlashCheck.Torch.ON) }
-            step.verdict?.let { applyVerdict(testing, it, step.ratio ?: 1.0) }
+            step.verdict?.let {
+                applyVerdict(testing, it, step.ratio ?: 1.0)
+                sceneMotion.reset() // the dark frames would look like a jump
+            }
             publishStats(started, luma.toFloat(), 0, 0, note = "flash test")
             return
         }
@@ -149,8 +161,16 @@ class GlintModule(
             objects.submit(bitmap())
         }
 
+        val (sceneDx, sceneDy) = sceneMotion.update(gray)
         val found = FrameOps.brightSpots(gray, ScanConfig.GLINT_SPOTS)
         val update = tracker.update(found.spots)
+        // Angle test on every spot seen in this frame.
+        for (t in update.tracks) {
+            if (t.missed != 0 || t.id in rejectedTracks) continue
+            if (parallax.update(t.id, t.x, t.y, sceneDx, sceneDy) == ParallaxCheck.Verdict.REFLECTION) {
+                rejectReflection(t)
+            }
+        }
         for (t in update.newlyConfirmed) {
             val objectKey = objects?.objectKeyAt(t.x, t.y)
             val key = objectKey ?: "glint-${++glintCount}"
@@ -171,7 +191,7 @@ class GlintModule(
                 t.x, t.y, t.diameterPx, found.spots.firstOrNull { it.x == t.x && it.y == t.y }?.strength ?: 0f, key))
         }
         // Confidence grows the longer a confirmed glint is tracked.
-        val visible = tracker.visibleConfirmed().filter { it.id !in lightSourceTracks }
+        val visible = tracker.visibleConfirmed().filter { it.id !in rejectedTracks }
         for (t in visible) {
             val key = keyByTrack[t.id] ?: continue
             val f = findingsByKey[key] ?: continue
@@ -200,7 +220,7 @@ class GlintModule(
         val switch = torch ?: return
         while (flashQueue.isNotEmpty()) {
             val id = flashQueue.removeFirst()
-            val track = visible.firstOrNull { it.id == id } ?: continue
+            val track = visible.firstOrNull { it.id == id && it.id !in rejectedTracks } ?: continue
             val brightness = FrameOps.peakAround(gray, track.x, track.y, ScanConfig.FLASH_SAMPLE_RADIUS_PX)
             flashTrack = track
             switch(flash.begin(brightness) == FlashCheck.Torch.ON)
@@ -221,11 +241,31 @@ class GlintModule(
                 findingsByKey[key] = f.copy(confidence = maxOf(f.confidence, ScanConfig.FLASH_LENS_CONFIDENCE), reason = reason)
             }
             FlashCheck.Verdict.LIGHT_SOURCE -> {
-                lightSourceTracks += track.id
+                rejectedTracks += track.id
                 // Keep the finding if another glint on the same object already passed as a lens.
                 if (key !in lensKeys) findingsByKey.remove(key)
             }
             FlashCheck.Verdict.UNCLEAR -> Unit
+        }
+        publishFindings()
+    }
+
+    /** A reflection sliding across flat glass: drop it, even if it passed the flash test. */
+    private fun rejectReflection(t: BlobTracker.Track) {
+        rejectedTracks += t.id
+        val key = keyByTrack[t.id]
+        Log.i(tag, "Angle test: spot ${t.id} slides across the surface (reflection), key=$key")
+        if (key != null) {
+            val othersOnKey = keyByTrack.any { (id, k) -> k == key && id != t.id && id !in rejectedTracks }
+            if (!othersOnKey) {
+                findingsByKey.remove(key)
+                lensKeys -= key
+            }
+        }
+        if (flashTrack?.id == t.id && flash.active) {
+            flash.cancel()
+            flashTrack = null
+            torch?.invoke(true)
         }
         publishFindings()
     }

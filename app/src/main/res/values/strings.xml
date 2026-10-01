@@ -142,6 +142,10 @@
     <string name="results_low_all_ran">All 6 checks ran; nothing stood out.</string>
     <string name="results_low_some_ran">%1$d of 6 checks ran; nothing stood out.</string>
     <string name="results_checked_count">%1$d of %2$d checked</string>
+    <plurals name="results_group_count">
+        <item quantity="one">%1$d spot</item>
+        <item quantity="other">%1$d spots</item>
+    </plurals>
     <string name="results_done">Done</string>
     <string name="results_scan_another">Scan another room</string>
     <string name="results_check_spots">Check flagged spots</string>

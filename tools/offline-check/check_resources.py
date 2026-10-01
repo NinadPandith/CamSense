@@ -15,7 +15,10 @@ except ET.ParseError as e:
     errors.append(f"XML: {e}")
 names = re.findall(r'<string name="([^"]+)"', src)
 errors += [f"{n}: duplicate name" for n in sorted({n for n in names if names.count(n) > 1})]
-for name, value in re.findall(r'<string name="([^"]+)">(.*?)</string>', src, re.S):
+entries = re.findall(r'<string name="([^"]+)">(.*?)</string>', src, re.S)
+for plural, body in re.findall(r'<plurals name="([^"]+)">(.*?)</plurals>', src, re.S):
+    entries += [(f"{plural}[{q}]", v) for q, v in re.findall(r'<item quantity="([a-z]+)">(.*?)</item>', body, re.S)]
+for name, value in entries:
     if re.search(r"(?<!\\)'", value):
         errors.append(f"{name}: unescaped apostrophe (write \\')")
     if re.search(r'(?<!\\)"', value):

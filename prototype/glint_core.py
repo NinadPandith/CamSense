@@ -24,6 +24,7 @@ class GlintConfig:
     circularity_min_area: float = 12  # GLINT_CIRCULARITY_MIN_AREA
     min_aspect: float = 0.5           # GLINT_MIN_ASPECT
     max_spots: int = 25               # GLINT_MAX_SPOTS
+    max_surround: float = 120.0       # GLINT_MAX_SURROUND (dot on a lit screen/wall is skipped)
     confirm_frames: int = 5           # GLINT_CONFIRM_FRAMES
     max_missed_frames: int = 3        # GLINT_MAX_MISSED_FRAMES
     match_distance: float = 0.04      # GLINT_MATCH_DISTANCE (fraction of frame)
@@ -78,6 +79,8 @@ def bright_blobs(gray: np.ndarray, cfg: GlintConfig) -> list[Blob]:
         if area >= cfg.circularity_min_area:
             if pixel_circularity(area, cv2.arcLength(c, True)) < cfg.min_circularity:
                 continue
+        if background[y + bh // 2, x + bw // 2] > cfg.max_surround:
+            continue  # dot on a lit surface
         strength = float(contrast[y:y + bh, x:x + bw].max())
         blobs.append(Blob((x + bw / 2) / w, (y + bh / 2) / h, diameter, strength))
     return sorted(blobs, key=lambda b: -b.strength)[:cfg.max_spots]
@@ -140,3 +143,40 @@ class BlobTracker:
 
     def visible_confirmed(self) -> list[Track]:
         return [t for t in self.tracks if t.confirmed and t.missed == 0]
+
+
+class SceneMotion:
+    """Whole-picture shift between frames, as SceneMotion.kt (positive = right/down)."""
+
+    def __init__(self, width: int = 160):  # SCENE_MOTION_WIDTH
+        self.width = width
+        self.prev = None
+
+    def update(self, gray: np.ndarray) -> tuple[float, float]:
+        h = max(8, round(self.width * gray.shape[0] / gray.shape[1]))
+        small = cv2.resize(gray, (self.width, h), interpolation=cv2.INTER_AREA).astype(np.float32)
+        prev, self.prev = self.prev, small
+        if prev is None or prev.shape != small.shape:
+            return 0.0, 0.0
+        (dx, dy), _ = cv2.phaseCorrelate(prev, small)
+        return dx / small.shape[1], dy / small.shape[0]
+
+
+class ParallaxCheck:
+    """Angle test, as ParallaxCheck.kt: a lens moves with the scene, glare on glass slides."""
+
+    def __init__(self, min_scene_motion: float = 0.04, max_ratio: float = 0.5):
+        self.min_scene_motion, self.max_ratio = min_scene_motion, max_ratio
+        self.states = {}
+
+    def update(self, track_id: int, x: float, y: float, sdx: float, sdy: float) -> str:
+        s = self.states.get(track_id)
+        if s is None:
+            self.states[track_id] = [x, y, 0.0, 0.0]
+            return "unknown"
+        s[2] += math.hypot(sdx, sdy)
+        s[3] += math.hypot((x - s[0]) - sdx, (y - s[1]) - sdy)
+        s[0], s[1] = x, y
+        if s[2] < self.min_scene_motion:
+            return "unknown"
+        return "reflection" if s[3] > self.max_ratio * s[2] else "attached"

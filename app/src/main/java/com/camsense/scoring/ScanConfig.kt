@@ -147,12 +147,23 @@ object ScanConfig {
     const val GLINT_BASE_CONFIDENCE = 0.7f
     const val GLINT_FULL_CONFIDENCE_FRAMES = 20
 
+    /** Surroundings brighter than this (box mean, 0–255) mean a lit screen or wall, not a lens. */
+    const val GLINT_MAX_SURROUND = 120.0
+
     val GLINT_SPOTS = com.camsense.core.camera.SpotParams(
         minLuma = GLINT_MIN_LUMA, minContrast = GLINT_MIN_CONTRAST, windowPx = GLINT_WINDOW_PX,
         minDiameter = GLINT_MIN_DIAMETER_PX, maxDiameter = GLINT_MAX_DIAMETER_PX,
         minCircularity = GLINT_MIN_CIRCULARITY, circularityMinArea = GLINT_CIRCULARITY_MIN_AREA,
-        minAspect = GLINT_MIN_ASPECT, maxSpots = GLINT_MAX_SPOTS,
+        minAspect = GLINT_MIN_ASPECT, maxSpots = GLINT_MAX_SPOTS, maxSurround = GLINT_MAX_SURROUND,
     )
+
+    // Angle test: a lens moves with the scene; a reflection on flat glass slides across it.
+    /** Width of the small copy used to measure how far the whole picture moved. */
+    const val SCENE_MOTION_WIDTH = 160
+    /** Total scene movement (fraction of the frame) needed before judging a spot. */
+    const val PARALLAX_MIN_SCENE_MOTION = 0.04f
+    /** A spot sliding more than this share of the scene's movement is a reflection. */
+    const val PARALLAX_MAX_RATIO = 0.5f
 
     // Flash-blink test: once a glint is confirmed, the torch goes off for a moment.
     // A lens reflection vanishes with it; a lamp or LED stays lit.
@@ -187,8 +198,16 @@ object ScanConfig {
         minLuma = 160.0, minContrast = 80.0, windowPx = 51,
         minDiameter = IR_MIN_DIAMETER_PX, maxDiameter = IR_MAX_DIAMETER_PX,
         minCircularity = 0.5f, circularityMinArea = GLINT_CIRCULARITY_MIN_AREA,
-        minAspect = 0.4f, maxSpots = 15,
+        minAspect = 0.4f, maxSpots = 15, maxSurround = 90.0,
     )
+    /** U or V this far below neutral (128) is a coloured light, not an IR glow. */
+    const val IR_CHROMA_TOLERANCE = 12f
+    /** Chroma is averaged over this radius (pixels) around a glow. */
+    const val IR_CHROMA_RADIUS_PX = 8
+    /** A newly confirmed glow this close (fraction of frame) to an earlier one is the same glow. */
+    const val IR_MERGE_DISTANCE = 0.08f
+    /** Keep at most this many glow findings (strongest). */
+    const val IR_MAX_FINDINGS = 3
     /** The remote's LED is close to the lens, so it can look big and blurry. */
     val IR_CALIBRATION_SPOTS = com.camsense.core.camera.SpotParams(
         minLuma = 150.0, minContrast = 60.0, windowPx = 101,

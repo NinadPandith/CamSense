@@ -101,6 +101,9 @@ object FrameOps {
                     c2f.release()
                     if (pixelCircularity(area, perimeter) < p.minCircularity) continue
                 }
+                val cx = rect.x + rect.width / 2
+                val cy = rect.y + rect.height / 2
+                if (background.get(cy, cx)[0] > p.maxSurround) continue // dot on a lit surface
                 val roi = contrast.submat(rect)
                 val strength = Core.minMaxLoc(roi).maxVal.toFloat()
                 roi.release()
@@ -118,6 +121,34 @@ object FrameOps {
         }
     }
 
+    /**
+     * Mean U and V (128 = no colour) around a point given in upright-frame fractions,
+     * read from the frame's chroma planes. Used to tell white/purple IR glows from
+     * coloured standby lights.
+     */
+    fun chromaAt(image: ImageProxy, x: Float, y: Float, radiusPx: Int): Pair<Float, Float> {
+        val (sx, sy) = com.camsense.modules.infrared.IrColour.uprightToSensor(x, y, image.imageInfo.rotationDegrees)
+        // Chroma planes are half the size of the image.
+        val cw = image.width / 2
+        val ch = image.height / 2
+        val cx = (sx * cw).toInt().coerceIn(0, cw - 1)
+        val cy = (sy * ch).toInt().coerceIn(0, ch - 1)
+        val r = (radiusPx / 2).coerceAtLeast(1)
+        fun mean(plane: ImageProxy.PlaneProxy): Float {
+            val buf = plane.buffer
+            var sum = 0L
+            var n = 0
+            for (yy in (cy - r).coerceAtLeast(0)..(cy + r).coerceAtMost(ch - 1)) {
+                for (xx in (cx - r).coerceAtLeast(0)..(cx + r).coerceAtMost(cw - 1)) {
+                    val i = yy * plane.rowStride + xx * plane.pixelStride
+                    if (i < buf.limit()) { sum += buf.get(i).toInt() and 0xFF; n++ }
+                }
+            }
+            return if (n == 0) 128f else sum.toFloat() / n
+        }
+        return mean(image.planes[1]) to mean(image.planes[2])
+    }
+
     /** Brightest pixel within [radiusPx] of a point given in 0–1 frame fractions. */
     fun peakAround(gray: Mat, x: Float, y: Float, radiusPx: Int): Double {
         val cx = (x * gray.cols()).toInt()
@@ -128,6 +159,38 @@ object FrameOps {
         val bottom = (cy + radiusPx).coerceIn(top + 1, gray.rows())
         val roi = gray.submat(top, bottom, left, right)
         return try { Core.minMaxLoc(roi).maxVal } finally { roi.release() }
+    }
+}
+
+/**
+ * How far the whole picture moved since the last frame, in 0–1 frame fractions
+ * (phase correlation on a small copy). Positive = the scene moved right/down.
+ * Used by the angle test (ParallaxCheck).
+ */
+class SceneMotion(private val width: Int) {
+    private var previous: Mat? = null
+
+    fun update(gray: Mat): Pair<Float, Float> {
+        val small = Mat()
+        val h = (width * gray.rows().toDouble() / gray.cols()).coerceAtLeast(8.0)
+        Imgproc.resize(gray, small, Size(width.toDouble(), h), 0.0, 0.0, Imgproc.INTER_AREA)
+        val f = Mat()
+        small.convertTo(f, CvType.CV_32F)
+        small.release()
+        val prev = previous
+        previous = f
+        if (prev == null || prev.size() != f.size()) {
+            prev?.release()
+            return 0f to 0f
+        }
+        val shift = Imgproc.phaseCorrelate(prev, f)
+        prev.release()
+        return (shift.x / f.cols()).toFloat() to (shift.y / f.rows()).toFloat()
+    }
+
+    fun reset() {
+        previous?.release()
+        previous = null
     }
 }
 

@@ -17,6 +17,11 @@ data class SpotParams(
     val minAspect: Float,
     /** Keep at most this many spots per frame, strongest first. */
     val maxSpots: Int,
+    /**
+     * Skip spots whose surroundings (the box mean) are brighter than this: a dot on a
+     * lit screen or white wall isn't a lens. 255 turns the check off.
+     */
+    val maxSurround: Double = 255.0,
 )
 
 /** Spots kept, and how many raw candidates there were (for the diagnostics line). */

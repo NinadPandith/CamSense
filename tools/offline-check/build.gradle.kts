@@ -46,12 +46,13 @@ val generateR by tasks.registering {
     outputs.file(out)
     doLast {
         val names = Regex("<string name=\"([a-z0-9_]+)\"").findAll(strings.readText()).map { it.groupValues[1] }.toList()
+        val plurals = Regex("<plurals name=\"([a-z0-9_]+)\"").findAll(strings.readText()).map { it.groupValues[1] }.toList()
         val fonts = app.resolve("main/res/font").listFiles().orEmpty().map { it.nameWithoutExtension }
         val drawables = app.resolve("main/res/drawable").listFiles().orEmpty().map { it.nameWithoutExtension }
         fun block(name: String, ids: List<String>, base: Int) =
             "    object $name {\n" + ids.mapIndexed { i, n -> "        const val $n = ${base + i}\n" }.joinToString("") + "    }\n"
         out.get().asFile.apply { parentFile.mkdirs() }.writeText(
-            "package com.camsense\n\nobject R {\n" + block("string", names, 1) + block("font", fonts, 5000) +
+            "package com.camsense\n\nobject R {\n" + block("string", names, 1) + block("plurals", plurals, 4000) + block("font", fonts, 5000) +
                 block("drawable", drawables, 6000) + "}\n\nobject BuildConfig {\n    const val DEBUG = true\n" +
                 "    const val VERSION_NAME = \"1.0.0\"\n}\n"
         )

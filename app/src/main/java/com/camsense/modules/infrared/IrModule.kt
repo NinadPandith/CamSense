@@ -92,7 +92,11 @@ class IrModule(private val settings: SettingsStore) : BaseModule(ModuleId.INFRAR
             // FR-2.3: only glows that show in darkness count.
             if (luma <= ScanConfig.IR_DARK_MAX_LUMA || brightRoomAccepted) {
                 val found = FrameOps.brightSpots(gray, ScanConfig.IR_SPOTS)
-                blobs = found.spots
+                // Night-vision LEDs look white or purple; standby lights are coloured.
+                blobs = found.spots.filter { b ->
+                    val (u, v) = FrameOps.chromaAt(image, b.x, b.y, ScanConfig.IR_CHROMA_RADIUS_PX)
+                    IrColour.isIrLike(u, v, ScanConfig.IR_CHROMA_TOLERANCE)
+                }
                 candidates = found.candidates
             }
         } finally {
@@ -101,16 +105,30 @@ class IrModule(private val settings: SettingsStore) : BaseModule(ModuleId.INFRAR
 
         val update = tracker.update(blobs)
         for (t in update.newlyConfirmed) {
-            val key = "ir-${++count}"
+            // Panning back over the same glow: reuse its finding instead of adding another.
+            val same = findingsByKey.entries.firstOrNull { (_, f) ->
+                val b = f.screenBox ?: return@firstOrNull false
+                kotlin.math.hypot(b.centerX - t.x, b.centerY - t.y) < ScanConfig.IR_MERGE_DISTANCE
+            }
+            val key = same?.key ?: "ir-${++count}"
             keyByTrack[t.id] = key
-            findingsByKey[key] = Finding(Reasons.IR, ScanConfig.IR_BASE_CONFIDENCE, key,
-                screenBox = NormRect.around(t.x, t.y, 0.03f))
+            if (same == null) {
+                findingsByKey[key] = Finding(Reasons.IR, ScanConfig.IR_BASE_CONFIDENCE, key,
+                    screenBox = NormRect.around(t.x, t.y, 0.03f))
+            }
         }
         for (t in tracker.visibleConfirmed()) {
             val key = keyByTrack[t.id] ?: continue
             val f = findingsByKey[key] ?: continue
             val c = (ScanConfig.IR_BASE_CONFIDENCE + 0.02f * (t.hits - ScanConfig.IR_CONFIRM_FRAMES)).coerceAtMost(1f)
             if (c > f.confidence) findingsByKey[key] = f.copy(confidence = c)
+        }
+
+        // Keep only the strongest few glows.
+        if (findingsByKey.size > ScanConfig.IR_MAX_FINDINGS) {
+            findingsByKey.entries.sortedBy { it.value.confidence }
+                .take(findingsByKey.size - ScanConfig.IR_MAX_FINDINGS)
+                .forEach { findingsByKey.remove(it.key) }
         }
 
         _overlay.value = CameraOverlay(
