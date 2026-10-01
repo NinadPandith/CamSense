@@ -24,6 +24,13 @@ Docs: [PRD](docs/prd.md) · [App flow](docs/app-flow.md) · [Tech stack](docs/te
 
 ## Build and run
 
+**Quickest (Windows):** install [Android Studio](https://developer.android.com/studio) and open it
+once so it downloads the SDK. Download this branch as a ZIP, unzip it, connect your phone with
+USB debugging on, and double-click `run.bat`. It finds Java and the SDK, builds, installs and opens
+the app, then shows the app's log (saved to `app-log.txt`; build output goes to `build-log.txt`).
+
+**In Android Studio:**
+
 1. Open the folder in Android Studio (latest stable) and let Gradle sync.
    Versions are pinned in `gradle/libs.versions.toml`. The Google-hosted ones (AGP,
    AndroidX, LiteRT) couldn't be re-checked from the machine this was written on; if

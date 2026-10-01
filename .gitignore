@@ -24,3 +24,5 @@ tools/offline-check/libs/
 tools/offline-check/build/
 tools/offline-check/.gradle/
 tools/offline-check/.kotlin/
+build-log.txt
+app-log.txt
