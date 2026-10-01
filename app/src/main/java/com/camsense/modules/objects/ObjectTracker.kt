@@ -85,9 +85,17 @@ class ObjectTracker(
     fun allConfirmed(): List<TrackedObject> = confirmedByKey.values.toList()
 
     /** The visible confirmed object whose (slightly grown) box holds the point, if any. */
-    fun objectAt(x: Float, y: Float, margin: Float): TrackedObject? =
-        active.filter { it.confirmed && it.missed <= 2 && it.box.expand(margin).contains(x, y) }
-            .minByOrNull { it.box.area }
+    fun objectAt(x: Float, y: Float, margin: Float): TrackedObject? = pickAt(active, x, y, margin)
+
+    /** Snapshot of the current tracks, safe to read from another thread. */
+    fun activeSnapshot(): List<TrackedObject> = active.toList()
+
+    companion object {
+        /** Smallest recently seen confirmed object whose grown box holds the point. */
+        fun pickAt(objects: List<TrackedObject>, x: Float, y: Float, margin: Float): TrackedObject? =
+            objects.filter { it.confirmed && it.missed <= 2 && it.box.expand(margin).contains(x, y) }
+                .minByOrNull { it.box.area }
+    }
 
     fun reset() {
         active.clear()

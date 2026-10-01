@@ -31,8 +31,9 @@ class Preview : UseCase() {
         fun build(): Preview = Preview()
     }
 }
-interface CameraControl { fun enableTorch(on: Boolean): Any }
-interface CameraInfo { fun hasFlashUnit(): Boolean }
+interface CameraControl { fun enableTorch(on: Boolean): Any; fun setExposureCompensationIndex(value: Int): Any }
+interface ExposureState { val isExposureCompensationSupported: Boolean; val exposureCompensationRange: android.util.Range<Int> }
+interface CameraInfo { fun hasFlashUnit(): Boolean; val exposureState: ExposureState }
 interface Camera { val cameraControl: CameraControl; val cameraInfo: CameraInfo }
 class CameraSelector {
     class Builder { fun requireLensFacing(f: Int): Builder = this; fun build(): CameraSelector = CameraSelector() }

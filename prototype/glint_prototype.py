@@ -4,7 +4,7 @@ Examples:
   python glint_prototype.py                       # laptop webcam, live view
   python glint_prototype.py clips/hidden_1m.mp4    # one clip, live view
   python glint_prototype.py --report clips/*.mp4   # no window; frames with confirmed glints per clip
-  python glint_prototype.py --threshold 245 --confirm 8 --report clips/empty_*.mp4
+  python glint_prototype.py --contrast 90 --confirm 8 --report clips/empty_*.mp4
 
 Gate for Day 2: the lens is found in 9 of 10 hidden-phone clips at 1-2 m, and the
 empty-room clips report 0 confirmed glints. Copy the values that pass into
@@ -66,13 +66,14 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("sources", nargs="*", help="video files; none = webcam")
     p.add_argument("--report", action="store_true", help="no window, print a line per clip")
-    p.add_argument("--threshold", type=float, default=GlintConfig.luma_threshold)
+    p.add_argument("--min-luma", type=float, default=GlintConfig.min_luma)
+    p.add_argument("--contrast", type=float, default=GlintConfig.min_contrast)
     p.add_argument("--min-d", type=float, default=GlintConfig.min_diameter_px)
     p.add_argument("--max-d", type=float, default=GlintConfig.max_diameter_px)
     p.add_argument("--circularity", type=float, default=GlintConfig.min_circularity)
     p.add_argument("--confirm", type=int, default=GlintConfig.confirm_frames)
     a = p.parse_args()
-    cfg = GlintConfig(luma_threshold=a.threshold, min_diameter_px=a.min_d, max_diameter_px=a.max_d,
+    cfg = GlintConfig(min_luma=a.min_luma, min_contrast=a.contrast, min_diameter_px=a.min_d, max_diameter_px=a.max_d,
                       min_circularity=a.circularity, confirm_frames=a.confirm)
     for src in a.sources or [None]:
         frames, with_glint, confirmed = run(src, cfg, show=not a.report)

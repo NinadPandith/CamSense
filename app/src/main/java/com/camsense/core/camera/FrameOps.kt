@@ -59,55 +59,75 @@ object FrameOps {
     fun meanLuma(gray: Mat): Double = Core.mean(gray).`val`[0]
 
     /**
-     * Small bright round spots (PRD FR-1.2): threshold, contours, then keep blobs
-     * whose diameter is in range and that are round enough. Returns an empty list
-     * when the frame has so many blobs that it is glare rather than a lens.
+     * Small round spots that are much brighter than their surroundings (PRD FR-1.2).
+     *
+     * Uses local contrast (the pixel minus the mean of a [SpotParams.windowPx] box
+     * around it) rather than a fixed brightness cut-off. With the torch on, auto
+     * exposure darkens the frame, so a lens reflection may only reach ~220 while still
+     * standing far above its background; large bright areas (glass, walls, lamps) have
+     * almost no local contrast and drop out. Candidates are then filtered by size,
+     * shape and roundness, and the strongest [SpotParams.maxSpots] are kept, so a
+     * busy frame never hides the lens.
      */
-    fun brightBlobs(
-        gray: Mat,
-        threshold: Double,
-        minDiameter: Float,
-        maxDiameter: Float,
-        minCircularity: Float,
-        circularityMinArea: Double,
-        maxBlobs: Int,
-    ): List<Blob> {
-        val bin = Mat()
+    fun brightSpots(gray: Mat, p: SpotParams): SpotResult {
+        val background = Mat()
+        val contrast = Mat()
+        val contrastMask = Mat()
+        val lumaMask = Mat()
+        val mask = Mat()
         val hierarchy = Mat()
         val contours = ArrayList<MatOfPoint>()
         try {
-            Imgproc.threshold(gray, bin, threshold, 255.0, Imgproc.THRESH_BINARY)
-            Imgproc.findContours(bin, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE)
-            if (contours.size > maxBlobs) return emptyList()
+            Imgproc.blur(gray, background, Size(p.windowPx.toDouble(), p.windowPx.toDouble()))
+            Core.subtract(gray, background, contrast) // 8-bit: saturates at 0
+            Imgproc.threshold(contrast, contrastMask, p.minContrast, 255.0, Imgproc.THRESH_BINARY)
+            Imgproc.threshold(gray, lumaMask, p.minLuma, 255.0, Imgproc.THRESH_BINARY)
+            Core.bitwise_and(contrastMask, lumaMask, mask)
+            Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE)
             val w = gray.cols().toFloat()
             val h = gray.rows().toFloat()
-            val blobs = ArrayList<Blob>()
+            val spots = ArrayList<Blob>()
             for (c in contours) {
                 val rect = Imgproc.boundingRect(c)
                 val diameter = max(rect.width, rect.height).toFloat()
-                if (diameter < minDiameter || diameter > maxDiameter) continue
-                if (min(rect.width, rect.height).toFloat() / max(rect.width, rect.height) < ScanConfig.GLINT_MIN_ASPECT) {
+                if (diameter < p.minDiameter || diameter > p.maxDiameter) continue
+                if (min(rect.width, rect.height).toFloat() / max(rect.width, rect.height) < p.minAspect) {
                     continue // streaks and smears, not a point
                 }
                 val area = max(Imgproc.contourArea(c), 1.0)
-                if (area >= circularityMinArea) {
+                if (area >= p.circularityMinArea) {
                     val c2f = MatOfPoint2f(*c.toArray())
                     val perimeter = Imgproc.arcLength(c2f, true)
                     c2f.release()
-                    if (pixelCircularity(area, perimeter) < minCircularity) continue
+                    if (pixelCircularity(area, perimeter) < p.minCircularity) continue
                 }
-                blobs += Blob(
+                val roi = contrast.submat(rect)
+                val strength = Core.minMaxLoc(roi).maxVal.toFloat()
+                roi.release()
+                spots += Blob(
                     x = (rect.x + rect.width / 2f) / w,
                     y = (rect.y + rect.height / 2f) / h,
                     diameterPx = diameter,
+                    strength = strength,
                 )
             }
-            return blobs
+            return SpotResult(spots.sortedByDescending { it.strength }.take(p.maxSpots), contours.size)
         } finally {
             contours.forEach { it.release() }
-            bin.release()
-            hierarchy.release()
+            listOf(background, contrast, contrastMask, lumaMask, mask, hierarchy).forEach { it.release() }
         }
+    }
+
+    /** Brightest pixel within [radiusPx] of a point given in 0–1 frame fractions. */
+    fun peakAround(gray: Mat, x: Float, y: Float, radiusPx: Int): Double {
+        val cx = (x * gray.cols()).toInt()
+        val cy = (y * gray.rows()).toInt()
+        val left = (cx - radiusPx).coerceIn(0, gray.cols() - 1)
+        val top = (cy - radiusPx).coerceIn(0, gray.rows() - 1)
+        val right = (cx + radiusPx).coerceIn(left + 1, gray.cols())
+        val bottom = (cy + radiusPx).coerceIn(top + 1, gray.rows())
+        val roi = gray.submat(top, bottom, left, right)
+        return try { Core.minMaxLoc(roi).maxVal } finally { roi.release() }
     }
 }
 

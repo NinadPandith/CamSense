@@ -75,10 +75,25 @@ object ScanConfig {
     const val NET_SCORE_HTTP_ALT = 0.3f        // 8080/8000/4747/8081 open, unknown service
     const val NET_SCORE_HTTP_ONLY = 0.1f       // only port 80
     const val NET_FINDING_MIN = 0.3f
+    /** Answers an ONVIF probe for video transmitters: almost always an IP camera. */
+    const val NET_SCORE_ONVIF = 0.9f
+    const val ONVIF_LISTEN_MS = 3_000L
+
+    // Camera hotspots: spy cameras not joined to the room's Wi-Fi broadcast their own.
+    const val HOTSPOT_SCAN_MS = 8_000L
+    const val HOTSPOT_SCORE_CAMERA_NAME = 0.75f
+    const val HOTSPOT_SCORE_CAMERA_VENDOR = 0.6f
+    /** Whole words in a network name that point to a camera. */
+    val HOTSPOT_CAMERA_WORDS = listOf(
+        "ipc", "ipcam", "ipcamera", "camera", "cam", "webcam", "wificam", "hdwificam", "minicam",
+        "spycam", "spy", "dvr", "nvr", "v380", "yoosee", "icsee", "xmeye", "lookcam", "camhi",
+        "camhipro", "p2pcam", "carecam", "ezviz", "imou", "wyze", "reolink", "hikvision", "dahua",
+    )
 
     // ---- M4 Bluetooth ----
     const val BLE_SCAN_MS = 20_000L
-    const val BLE_STRONG_RSSI = -60
+    /** Stronger than this (dBm) means within about a metre; -60 flagged earbuds and watches. */
+    const val BLE_STRONG_RSSI = -50
     val BLE_CAMERA_KEYWORDS = listOf("cam", "ipc", "spy", "dvr", "lens", "video", "a9", "x5", "v380", "yi ")
     const val BLE_SCORE_CAMERA_NAME = 0.7f
     const val BLE_SCORE_CAMERA_VENDOR = 0.5f
@@ -101,7 +116,12 @@ object ScanConfig {
     // ---- M1 Lens glint (tune on prototype/glint_prototype.py first) ----
     const val GLINT_TARGET_WIDTH = 1280
     const val GLINT_TARGET_HEIGHT = 720
-    const val GLINT_LUMA_THRESHOLD = 250.0
+    /** Spot must reach this brightness (0–255)... */
+    const val GLINT_MIN_LUMA = 200.0
+    /** ...and stand this far above the mean of the box around it. */
+    const val GLINT_MIN_CONTRAST = 70.0
+    /** Box for that mean, in pixels: about twice the largest spot. */
+    const val GLINT_WINDOW_PX = 31
     const val GLINT_MIN_DIAMETER_PX = 2f
     const val GLINT_MAX_DIAMETER_PX = 15f
     const val GLINT_MIN_CIRCULARITY = 0.7f
@@ -109,8 +129,8 @@ object ScanConfig {
     const val GLINT_MIN_ASPECT = 0.5f
     /** Blobs smaller than this area skip the circularity test (perimeter is unreliable). */
     const val GLINT_CIRCULARITY_MIN_AREA = 12.0
-    /** A frame with more bright blobs than this is glare, not a lens. */
-    const val GLINT_MAX_BLOBS_PER_FRAME = 40
+    /** Strongest spots kept per frame; a busy frame never drops the lens. */
+    const val GLINT_MAX_SPOTS = 25
     const val GLINT_CONFIRM_FRAMES = 5
     const val GLINT_MAX_MISSED_FRAMES = 3
     /** Max centroid jump between frames, as a fraction of the frame width. */
@@ -119,26 +139,67 @@ object ScanConfig {
     const val GLINT_MAX_SIZE_RATIO = 2.5f
     /** Mean frame brightness above this shows "too bright" (the torch alone lights close walls). */
     const val LENS_TOO_BRIGHT_LUMA = 140.0
-    /** Run the object detector on every Nth lens-check frame to link glints to objects. */
+    /** Lens check exposure: this fraction of the lowest compensation, so reflections stand out. */
+    const val LENS_EXPOSURE_BIAS = -0.5f
+    /** Hand every Nth lens-check frame to the object detector (on its own thread). */
     const val LENS_OBJECT_EVERY_N_FRAMES = 6
     /** Glint confidence for a confirmed track; grows with how long it was tracked. */
     const val GLINT_BASE_CONFIDENCE = 0.7f
     const val GLINT_FULL_CONFIDENCE_FRAMES = 20
 
+    val GLINT_SPOTS = com.camsense.core.camera.SpotParams(
+        minLuma = GLINT_MIN_LUMA, minContrast = GLINT_MIN_CONTRAST, windowPx = GLINT_WINDOW_PX,
+        minDiameter = GLINT_MIN_DIAMETER_PX, maxDiameter = GLINT_MAX_DIAMETER_PX,
+        minCircularity = GLINT_MIN_CIRCULARITY, circularityMinArea = GLINT_CIRCULARITY_MIN_AREA,
+        minAspect = GLINT_MIN_ASPECT, maxSpots = GLINT_MAX_SPOTS,
+    )
+
+    // Flash-blink test: once a glint is confirmed, the torch goes off for a moment.
+    // A lens reflection vanishes with it; a lamp or LED stays lit.
+    /** Frames to wait after switching the torch before measuring (camera latency). */
+    const val FLASH_LATENCY_FRAMES = 3
+    /** Frames measured with the torch off. */
+    const val FLASH_SAMPLE_FRAMES = 4
+    /** Frames to let exposure settle after the torch is back on. */
+    const val FLASH_SETTLE_FRAMES = 4
+    /** Torch-off brightness / torch-on brightness at or below this: a lens reflection. */
+    const val FLASH_LENS_RATIO = 0.5
+    /** At or above this: a light source, not a reflection (finding dropped). */
+    const val FLASH_LIGHT_RATIO = 0.8
+    /** Confidence of a glint that passed the flash-blink test. */
+    const val FLASH_LENS_CONFIDENCE = 0.92f
+    /** Pixels around a spot searched for its brightness. */
+    const val FLASH_SAMPLE_RADIUS_PX = 6
+
     // ---- M2 Infrared ----
     const val IR_DARK_MAX_LUMA = 60.0
-    const val IR_LUMA_THRESHOLD = 200.0
     const val IR_MIN_DIAMETER_PX = 2f
     const val IR_MAX_DIAMETER_PX = 25f
     const val IR_CONFIRM_FRAMES = 4
     const val IR_CALIBRATION_TIMEOUT_MS = 15_000L
-    /** Frames with a bright spot needed to pass the TV-remote calibration. */
+    /** Times a spot must flicker on to pass the TV-remote calibration. */
     const val IR_CALIBRATION_HITS = 3
     const val IR_BASE_CONFIDENCE = 0.6f
     /** "Continue anyway" in a bright room multiplies confidence by this. */
     const val BRIGHT_ROOM_CONFIDENCE_FACTOR = 0.5f
 
+    val IR_SPOTS = com.camsense.core.camera.SpotParams(
+        minLuma = 160.0, minContrast = 80.0, windowPx = 51,
+        minDiameter = IR_MIN_DIAMETER_PX, maxDiameter = IR_MAX_DIAMETER_PX,
+        minCircularity = 0.5f, circularityMinArea = GLINT_CIRCULARITY_MIN_AREA,
+        minAspect = 0.4f, maxSpots = 15,
+    )
+    /** The remote's LED is close to the lens, so it can look big and blurry. */
+    val IR_CALIBRATION_SPOTS = com.camsense.core.camera.SpotParams(
+        minLuma = 150.0, minContrast = 60.0, windowPx = 101,
+        minDiameter = 2f, maxDiameter = 60f,
+        minCircularity = 0.3f, circularityMinArea = GLINT_CIRCULARITY_MIN_AREA,
+        minAspect = 0.3f, maxSpots = 8,
+    )
+
     // ---- Shared camera checks ----
+    /** No analyzed frame for this long: bind the camera again. */
+    const val CAMERA_STALL_MS = 2_500L
     /** Mean absolute difference between small consecutive frames that means "too fast". */
     const val MOTION_TOO_FAST = 18.0
     const val MOTION_FRAME_SIZE = 64

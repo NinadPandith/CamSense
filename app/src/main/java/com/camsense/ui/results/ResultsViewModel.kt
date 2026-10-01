@@ -85,6 +85,7 @@ class ResultsViewModel(private val container: AppContainer, private val scanId: 
             val snap = container.evidenceStore.snapshotFile(scan.id, f.id).takeIf { it.exists() }
             val technical = f.networkDeviceId?.let(deviceById::get)?.let { d ->
                 buildString {
+                    d.hostname?.let { append(it).append("\n") }
                     append(d.ip)
                     if (d.openPorts.isNotEmpty()) append("  ports ").append(d.openPorts.joinToString(", "))
                     d.mdnsName?.let { append("\n").append(it) }

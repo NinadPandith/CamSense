@@ -12,6 +12,8 @@ import com.camsense.core.Reasons
 import com.camsense.core.SkipReason
 import com.camsense.core.camera.CameraOverlay
 import com.camsense.core.camera.FrameOps
+import com.camsense.core.camera.FrameStats
+import com.camsense.core.camera.FrameStatsMeter
 import com.camsense.core.camera.MotionMeter
 import com.camsense.data.SettingsStore
 import com.camsense.modules.glint.BlobTracker
@@ -29,6 +31,10 @@ class IrModule(private val settings: SettingsStore) : BaseModule(ModuleId.INFRAR
 
     private val _overlay = MutableStateFlow(CameraOverlay())
     val overlay: StateFlow<CameraOverlay> = _overlay.asStateFlow()
+
+    private val _stats = MutableStateFlow(FrameStats())
+    val stats: StateFlow<FrameStats> = _stats.asStateFlow()
+    private val meter = FrameStatsMeter()
 
     @Volatile var brightRoomAccepted = false
     @Volatile private var supported = false
@@ -63,7 +69,7 @@ class IrModule(private val settings: SettingsStore) : BaseModule(ModuleId.INFRAR
     val analyzer = ImageAnalysis.Analyzer { image: ImageProxy ->
         try {
             analyze(image)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(tag, "Frame failed", e)
         } finally {
             image.close()
@@ -78,17 +84,16 @@ class IrModule(private val settings: SettingsStore) : BaseModule(ModuleId.INFRAR
         val luma: Double
         val fast: Boolean
         var blobs = emptyList<com.camsense.modules.glint.Blob>()
+        var candidates = 0
+        val started = System.currentTimeMillis()
         try {
             luma = FrameOps.meanLuma(gray)
             fast = motion.update(gray) > ScanConfig.MOTION_TOO_FAST
             // FR-2.3: only glows that show in darkness count.
             if (luma <= ScanConfig.IR_DARK_MAX_LUMA || brightRoomAccepted) {
-                blobs = FrameOps.brightBlobs(
-                    gray, ScanConfig.IR_LUMA_THRESHOLD, ScanConfig.IR_MIN_DIAMETER_PX,
-                    ScanConfig.IR_MAX_DIAMETER_PX, minCircularity = 0.5f,
-                    circularityMinArea = ScanConfig.GLINT_CIRCULARITY_MIN_AREA,
-                    maxBlobs = ScanConfig.GLINT_MAX_BLOBS_PER_FRAME,
-                )
+                val found = FrameOps.brightSpots(gray, ScanConfig.IR_SPOTS)
+                blobs = found.spots
+                candidates = found.candidates
             }
         } finally {
             gray.release()
@@ -120,6 +125,10 @@ class IrModule(private val settings: SettingsStore) : BaseModule(ModuleId.INFRAR
         val factor = if (brightRoomAccepted) ScanConfig.BRIGHT_ROOM_CONFIDENCE_FACTOR else 1f
         val findings = findingsByKey.values.map { it.copy(confidence = it.confidence * factor) }
         publish(findings.maxOfOrNull { it.confidence } ?: 0f, findings)
+        meter.tick(System.currentTimeMillis() - started, luma.toFloat(), candidates, blobs.size, findingsByKey.size)?.let {
+            _stats.value = it
+            Log.d(tag, "ir: ${it.line()}")
+        }
     }
 
     fun clearOverlay() { _overlay.value = CameraOverlay() }

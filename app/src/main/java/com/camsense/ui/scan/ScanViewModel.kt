@@ -9,6 +9,7 @@ import com.camsense.core.ModuleId
 import com.camsense.core.SkipReason
 import com.camsense.core.Spot
 import com.camsense.core.Spots
+import com.camsense.modules.network.toNetworkDevice
 import com.camsense.scoring.RiskAssessment
 import com.camsense.scoring.RiskEngine
 import kotlinx.coroutines.Job
@@ -59,7 +60,9 @@ class ScanViewModel(
     /** Step 2: Wi-Fi and Bluetooth start, and keep running through step 3. */
     fun startNetworkChecks() {
         // Also re-runs a check that was skipped for a missing permission, once the user allows it.
-        if (networkJob == null || modules.network.results.value.skipReason == SkipReason.NO_NEARBY_PERMISSION) {
+        val networkNeedsRetry = modules.network.results.value.skipReason == SkipReason.NO_NEARBY_PERMISSION ||
+            (networkJob?.isCompleted == true && modules.network.lanSkip.value == SkipReason.NO_NEARBY_PERMISSION)
+        if (networkJob == null || networkNeedsRetry) {
             networkJob = viewModelScope.launch { modules.network.start() }
         }
         if (bleJob == null || modules.ble.results.value.skipReason == SkipReason.NO_NEARBY_PERMISSION) {
@@ -136,7 +139,9 @@ class ScanViewModel(
                 scanId = id,
                 results = results,
                 assessment = assessment,
-                networkDevices = modules.network.devices.value,
+                networkDevices = modules.network.devices.value + modules.network.hotspots.value
+                    .filter { it.suspicionScore > 0f }
+                    .map { it.toNetworkDevice() },
                 bleDevices = modules.ble.devices.value,
             )
             onSaved(id)

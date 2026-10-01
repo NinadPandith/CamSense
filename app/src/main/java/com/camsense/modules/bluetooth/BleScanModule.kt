@@ -9,6 +9,7 @@ import android.content.Context
 import com.camsense.core.BaseModule
 import com.camsense.core.Finding
 import com.camsense.core.ModuleId
+import com.camsense.core.Reasons
 import com.camsense.core.SkipReason
 import com.camsense.core.permissions.Permissions
 import com.camsense.scoring.ScanConfig
@@ -80,13 +81,16 @@ class BleScanModule(
         val sorted = list.sortedByDescending { it.rssi }
         _devices.value = sorted
         val flagged = sorted.filter { it.suspicionScore >= ScanConfig.BLE_FINDING_MIN }
-        publish(
-            score = flagged.maxOfOrNull { it.suspicionScore } ?: 0f,
-            findings = flagged.map {
-                Finding(reason = it.reason ?: "", confidence = it.suspicionScore, targetKey = null, deviceAddress = it.address)
-            },
-            done = done,
-        )
+        // Camera-like names and makers are listed one by one; nearby unknown devices
+        // (often your own earbuds or watch) become a single finding.
+        val (unknown, named) = flagged.partition { it.reason == Reasons.BLE_STRONG_UNKNOWN }
+        val findings = named.map {
+            Finding(reason = it.reason ?: "", confidence = it.suspicionScore, targetKey = null, deviceAddress = it.address)
+        } + listOfNotNull(unknown.takeIf { it.isNotEmpty() }?.let { list ->
+            Finding(reason = Reasons.bleStrongUnknown(list.size), confidence = list.maxOf { it.suspicionScore },
+                targetKey = null, deviceAddress = list.first().address)
+        })
+        publish(score = flagged.maxOfOrNull { it.suspicionScore } ?: 0f, findings = findings, done = done)
     }
 
     override fun stop() = finish()

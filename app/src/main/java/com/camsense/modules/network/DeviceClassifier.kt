@@ -22,6 +22,7 @@ object DeviceClassifier {
         val rtspReply = ScanConfig.RTSP_PORT in ports && banner.startsWith("rtsp/1.0")
         val streamBanner = banner.isNotEmpty() && ScanConfig.STREAM_KEYWORDS.any { it in banner }
         if (rtspReply || streamBanner) return Verdict(ScanConfig.NET_SCORE_STREAM, Reasons.NET_STREAM)
+        if (device.onvif != null) return Verdict(ScanConfig.NET_SCORE_ONVIF, Reasons.NET_ONVIF)
 
         if (ScanConfig.RTSP_PORT in ports || ScanConfig.RTMP_PORT in ports) {
             return Verdict(ScanConfig.NET_SCORE_VIDEO_PORT, Reasons.NET_VIDEO_PORT)

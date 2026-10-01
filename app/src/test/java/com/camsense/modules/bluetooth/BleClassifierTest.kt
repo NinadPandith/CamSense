@@ -12,8 +12,8 @@ class BleClassifierTest {
 
     @Test
     fun strongUnknownIsFlaggedWeakIsNot() {
-        assertEquals(ScanConfig.BLE_SCORE_STRONG_UNKNOWN, BleClassifier.classify(null, -50, false).score)
-        assertEquals(0f, BleClassifier.classify(null, -75, false).score)
+        assertEquals(ScanConfig.BLE_SCORE_STRONG_UNKNOWN, BleClassifier.classify(null, -45, false).score)
+        assertEquals(0f, BleClassifier.classify(null, -55, false).score)
         assertEquals(0f, BleClassifier.classify("Galaxy Buds", -40, false).score)
     }
 

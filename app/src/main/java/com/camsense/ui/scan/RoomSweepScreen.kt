@@ -62,6 +62,7 @@ fun RoomSweepScreen(vm: ScanViewModel, onNext: (showIr: Boolean) -> Unit, onCame
         if (!vm.startRoomSweep()) next() // model failed to load: step skipped
     }
     val overlay by vm.modules.objects.overlay.collectAsState()
+    val stats by vm.modules.objects.stats.collectAsState()
 
     CameraStepScreen(
         step = 3,
@@ -73,5 +74,6 @@ fun RoomSweepScreen(vm: ScanViewModel, onNext: (showIr: Boolean) -> Unit, onCame
         preview = { CameraPreview(CameraSelector.LENS_FACING_BACK, vm.modules.objects.analyzer, Modifier.fillMaxSize()) },
         banner = { if (overlay.tooFast) NoticeBanner(stringResource(R.string.banner_too_fast)) },
         bottom = { TimedStepButton(stringResource(R.string.room_button), ScanConfig.ROOM_SWEEP_MIN_MS, ::next) },
+        debugLine = stats.line(),
     )
 }

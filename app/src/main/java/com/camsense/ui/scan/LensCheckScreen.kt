@@ -34,6 +34,7 @@ fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit
     val glint by vm.modules.glint.overlay.collectAsState()
     val objects by vm.modules.objects.overlay.collectAsState()
     var acceptedBright by remember { mutableStateOf(false) }
+    val stats by vm.modules.glint.stats.collectAsState()
     val overlay = if (objects.frameWidth == glint.frameWidth && objects.frameHeight == glint.frameHeight)
         glint.copy(marks = objects.marks + glint.marks) else glint
 
@@ -45,7 +46,12 @@ fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit
         dim = true,
         onStop = askStop,
         preview = {
-            CameraPreview(CameraSelector.LENS_FACING_BACK, vm.modules.glint.analyzer, Modifier.fillMaxSize(), torch = true)
+            CameraPreview(
+                CameraSelector.LENS_FACING_BACK, vm.modules.glint.analyzer, Modifier.fillMaxSize(),
+                torch = true,
+                exposureBias = ScanConfig.LENS_EXPOSURE_BIAS,
+                onCamera = vm.modules.glint::attachCamera,
+            )
         },
         banner = {
             if (glint.tooBright && !acceptedBright) {
@@ -68,5 +74,6 @@ fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit
                 onNext()
             }
         },
+        debugLine = stats.line(),
     )
 }

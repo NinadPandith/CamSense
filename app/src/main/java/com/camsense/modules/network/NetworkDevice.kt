@@ -6,6 +6,8 @@ data class NetworkDevice(
     val hostname: String? = null,
     val mdnsName: String? = null,
     val ssdpServer: String? = null,
+    /** Summary of an ONVIF discovery reply, when the device answered one. */
+    val onvif: String? = null,
     val openPorts: List<Int> = emptyList(),
     val banner: String? = null,
     val isSelf: Boolean = false,

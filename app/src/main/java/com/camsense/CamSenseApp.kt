@@ -37,7 +37,7 @@ class AppContainer(val app: Application) {
     fun newScanModules(): ScanModules {
         val objects = ObjectsModule(objectDetector)
         return ScanModules(
-            network = NetworkScanModule(app),
+            network = NetworkScanModule(app, oui),
             ble = BleScanModule(app, oui),
             objects = objects,
             infrared = IrModule(settings),

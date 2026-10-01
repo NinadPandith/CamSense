@@ -7,8 +7,8 @@ the phone; nothing is uploaded.
 
 | Check | How | Weight |
 |---|---|---|
-| M1 Lens glint | Torch + rear camera, OpenCV blob tracking | 0.30 |
-| M3 Wi-Fi | /24 port sweep (554, 80, 8080, 8000, 1935, 4747, 8081), banners, mDNS, SSDP | 0.25 |
+| M1 Lens glint | Torch + rear camera, local-contrast spot tracking, flash-blink test | 0.30 |
+| M3 Wi-Fi | /24 port sweep (554, 80, 8080, 8000, 1935, 4747, 8081), banners, mDNS, SSDP, ONVIF, camera hotspots nearby | 0.25 |
 | M2 Infrared | Front camera in the dark, after a TV-remote calibration | 0.15 |
 | M6 AI objects | YOLO26n (LiteRT) marks likely hiding spots | 0.10 |
 | M4 Bluetooth | 20 s BLE scan, camera-like names, very close unknown devices | 0.10 |

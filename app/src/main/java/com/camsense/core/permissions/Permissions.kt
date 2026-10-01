@@ -24,11 +24,19 @@ object Permissions {
     val localNetwork: List<String>
         get() = if (Build.VERSION.SDK_INT >= API_LOCAL_NETWORK) listOf(ACCESS_LOCAL_NETWORK) else emptyList()
 
-    /** Bluetooth and local network share the Nearby devices prompt, so ask together. */
-    val nearbyDevices: List<String> get() = bluetooth + localNetwork
+    /**
+     * Listing nearby Wi-Fi networks: NEARBY_WIFI_DEVICES (declared neverForLocation)
+     * from Android 13, fine location before that.
+     */
+    val wifiScan: List<String>
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) listOf(Manifest.permission.NEARBY_WIFI_DEVICES)
+        else listOf(Manifest.permission.ACCESS_FINE_LOCATION)
 
-    /** On Android 10–11 the Bluetooth scan needs Location, so the row says so. */
-    val nearbyUsesLocation: Boolean get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+    /** Bluetooth, Wi-Fi networks and local network share the Nearby devices prompt, so ask together. */
+    val nearbyDevices: List<String> get() = (bluetooth + wifiScan + localNetwork).distinct()
+
+    /** Before Android 13 the Wi-Fi and Bluetooth scans need Location, so the row says so. */
+    val nearbyUsesLocation: Boolean get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
 
     fun granted(context: Context, permissions: List<String>): Boolean =
         permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
@@ -36,5 +44,6 @@ object Permissions {
     fun hasCamera(context: Context) = granted(context, camera)
     fun hasBluetooth(context: Context) = granted(context, bluetooth)
     fun hasLocalNetwork(context: Context) = granted(context, localNetwork)
+    fun hasWifiScan(context: Context) = granted(context, wifiScan)
     fun hasNearby(context: Context) = granted(context, nearbyDevices)
 }

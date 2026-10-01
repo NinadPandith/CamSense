@@ -22,9 +22,15 @@
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
+    <!-- Bluetooth (Android 10-11) and nearby Wi-Fi networks (Android 10-12) -->
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
+        android:maxSdkVersion="32" />
+    <!-- Nearby Wi-Fi networks, Android 13+: camera hotspots. Never used for location. -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="tiramisu" />
     <!-- M5 beep feedback; High result vibration -->
     <uses-permission android:name="android.permission.VIBRATE" />
 

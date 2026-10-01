@@ -7,6 +7,7 @@ import com.camsense.core.Finding
 import com.camsense.core.ModuleId
 import com.camsense.core.SkipReason
 import com.camsense.core.permissions.Permissions
+import com.camsense.modules.bluetooth.OuiDatabase
 import com.camsense.scoring.ScanConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -22,53 +23,84 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * M3: sweeps the /24 subnet for camera ports, reads service banners and listens
- * for mDNS and SSDP announcements (PRD FR-3.1–3.5). Only the network the phone is
- * on; read-only checks; nothing leaves the local network.
+ * M3: the Wi-Fi check (PRD FR-3.1–3.5), three parts run together:
+ * - LAN sweep of the /24 subnet for camera ports, with service banners, mDNS, SSDP
+ *   and ONVIF discovery (only when the phone is on Wi-Fi);
+ * - nearby Wi-Fi networks with camera-like names or makers (spy cameras that aren't
+ *   joined to the room's Wi-Fi broadcast their own; works without joining anything).
+ * Read-only checks; nothing leaves the local network.
  */
-class NetworkScanModule(private val context: Context) : BaseModule(ModuleId.NETWORK) {
+class NetworkScanModule(private val context: Context, oui: OuiDatabase) : BaseModule(ModuleId.NETWORK) {
 
     private val _devices = MutableStateFlow<List<NetworkDevice>>(emptyList())
     /** Live device list for the Network check screen (self and router included, marked). */
     val devices: StateFlow<List<NetworkDevice>> = _devices.asStateFlow()
 
+    private val _hotspots = MutableStateFlow<List<Hotspot>>(emptyList())
+    /** Nearby Wi-Fi networks, camera-like first. */
+    val hotspots: StateFlow<List<Hotspot>> = _hotspots.asStateFlow()
+
+    private val _lanSkip = MutableStateFlow<SkipReason?>(null)
+    /** Why the LAN sweep didn't run (not on Wi-Fi, no permission), while the rest did. */
+    val lanSkip: StateFlow<SkipReason?> = _lanSkip.asStateFlow()
+
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
-    override fun isSupported(): Boolean = LocalNetworkInfo.read(context) != null
+    private val hotspotScanner = HotspotScanner(context, oui)
+
+    override fun isSupported(): Boolean = LocalNetworkInfo.read(context) != null || Permissions.hasWifiScan(context)
 
     override suspend fun start() {
-        if (!Permissions.hasLocalNetwork(context)) return skip(SkipReason.NO_NEARBY_PERMISSION)
-        val info = LocalNetworkInfo.read(context) ?: return skip(SkipReason.NO_WIFI)
+        val info = LocalNetworkInfo.read(context)
+        val lanReason = when {
+            info == null -> SkipReason.NO_WIFI
+            !Permissions.hasLocalNetwork(context) -> SkipReason.NO_NEARBY_PERMISSION
+            else -> null
+        }
+        val canScanHotspots = Permissions.hasWifiScan(context)
+        if (lanReason != null && !canScanHotspots) return skip(lanReason)
+        _lanSkip.value = lanReason
         markRunning()
 
         val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
         val lock = wifi?.createMulticastLock("camsense-discovery")?.apply { setReferenceCounted(false); acquire() }
         try {
             coroutineScope {
-                val mdns = async(Dispatchers.IO) { MdnsDiscovery(context).discover() }
-                val ssdp = async(Dispatchers.IO) { SsdpDiscovery().discover() }
-                val swept = sweep(info)
-                val names = mdns.await()
-                val servers = ssdp.await()
-                val merged = swept.map { d ->
-                    d.copy(mdnsName = names[d.ip], ssdpServer = servers[d.ip])
-                } + (names.keys + servers.keys)
-                    .filter { ip -> swept.none { it.ip == ip } && SubnetMath.parseIpv4(ip) != null }
-                    .map { ip -> NetworkDevice(ip, mdnsName = names[ip], ssdpServer = servers[ip]) }
-                publishDevices(merged.map(::classified), done = true)
+                val hotspots = if (canScanHotspots) async(Dispatchers.IO) { hotspotScanner.scan() } else null
+                if (info != null && lanReason == null) {
+                    val mdns = async(Dispatchers.IO) { MdnsDiscovery(context).discover() }
+                    val ssdp = async(Dispatchers.IO) { SsdpDiscovery().discover() }
+                    val onvif = async(Dispatchers.IO) { OnvifDiscovery().discover() }
+                    val swept = sweep(info)
+                    val names = mdns.await()
+                    val servers = ssdp.await()
+                    val cameras = onvif.await()
+                    val extraIps = (names.keys + servers.keys + cameras.keys)
+                        .filter { ip -> swept.none { it.ip == ip } && SubnetMath.parseIpv4(ip) != null }
+                    val merged = swept.map { d ->
+                        d.copy(mdnsName = names[d.ip], ssdpServer = servers[d.ip], onvif = cameras[d.ip])
+                    } + extraIps.map { ip -> NetworkDevice(ip, mdnsName = names[ip], ssdpServer = servers[ip], onvif = cameras[ip]) }
+                    lanDevices = merged.map(::classified)
+                    _progress.value = 1f
+                }
+                hotspots?.await()?.let { hotspotList = it }
+                republish(done = true)
             }
+        } catch (e: CancellationException) {
+            throw e // scan finished or stopped; the result already says DONE
         } catch (e: SecurityException) {
             // Android 17 without ACCESS_LOCAL_NETWORK: sockets fail with a permission error.
             skip(SkipReason.NO_NEARBY_PERMISSION)
-        } catch (e: CancellationException) {
-            throw e // scan finished or stopped; the result already says DONE
         } catch (e: Exception) {
             fail(SkipReason.MODULE_FAILED, e)
         } finally {
             lock?.release()
         }
     }
+
+    @Volatile private var lanDevices: List<NetworkDevice> = emptyList()
+    @Volatile private var hotspotList: List<Hotspot> = emptyList()
 
     private suspend fun sweep(info: LocalNetworkInfo): List<NetworkDevice> = withContext(Dispatchers.IO) {
         val hosts = SubnetMath.hostsToScan(info.ownIp, info.prefixLength)
@@ -126,15 +158,27 @@ class NetworkScanModule(private val context: Context) : BaseModule(ModuleId.NETW
     }
 
     private fun publishDevices(list: List<NetworkDevice>, done: Boolean) {
-        val sorted = list.sortedWith(compareByDescending<NetworkDevice> { it.suspicionScore }.thenBy {
+        lanDevices = list
+        republish(done)
+    }
+
+    /** Publishes LAN devices and nearby networks together, with findings from both. */
+    @Synchronized
+    private fun republish(done: Boolean) {
+        val sorted = lanDevices.sortedWith(compareByDescending<NetworkDevice> { it.suspicionScore }.thenBy {
             SubnetMath.parseIpv4(it.ip)?.toUInt() ?: 0u
         })
         _devices.value = sorted
+        _hotspots.value = hotspotList
         val suspicious = sorted.filter { !it.isSelf && !it.isGateway && it.suspicionScore >= ScanConfig.NET_FINDING_MIN }
+        val cameraNetworks = hotspotList.filter { it.suspicionScore >= ScanConfig.NET_FINDING_MIN }
         val findings = suspicious.map {
             Finding(reason = it.reason ?: "", confidence = it.suspicionScore, targetKey = null, deviceAddress = it.ip)
+        } + cameraNetworks.map {
+            Finding(reason = it.reason ?: "", confidence = it.suspicionScore, targetKey = null, deviceAddress = it.bssid)
         }
-        publish(suspicious.maxOfOrNull { it.suspicionScore } ?: 0f, findings, done)
+        val score = (suspicious.map { it.suspicionScore } + cameraNetworks.map { it.suspicionScore }).maxOrNull() ?: 0f
+        publish(score, findings, done)
         if (done) _progress.value = 1f
     }
 

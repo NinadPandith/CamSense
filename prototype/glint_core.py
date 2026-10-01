@@ -15,13 +15,15 @@ import numpy as np
 
 @dataclass
 class GlintConfig:
-    luma_threshold: float = 250.0     # GLINT_LUMA_THRESHOLD
+    min_luma: float = 200.0           # GLINT_MIN_LUMA
+    min_contrast: float = 70.0        # GLINT_MIN_CONTRAST
+    window_px: int = 31               # GLINT_WINDOW_PX
     min_diameter_px: float = 2.0      # GLINT_MIN_DIAMETER_PX
     max_diameter_px: float = 15.0     # GLINT_MAX_DIAMETER_PX
     min_circularity: float = 0.7      # GLINT_MIN_CIRCULARITY
     circularity_min_area: float = 12  # GLINT_CIRCULARITY_MIN_AREA
     min_aspect: float = 0.5           # GLINT_MIN_ASPECT
-    max_blobs_per_frame: int = 40     # GLINT_MAX_BLOBS_PER_FRAME
+    max_spots: int = 25               # GLINT_MAX_SPOTS
     confirm_frames: int = 5           # GLINT_CONFIRM_FRAMES
     max_missed_frames: int = 3        # GLINT_MAX_MISSED_FRAMES
     match_distance: float = 0.04      # GLINT_MATCH_DISTANCE (fraction of frame)
@@ -33,6 +35,7 @@ class Blob:
     x: float  # 0-1 of frame width
     y: float  # 0-1 of frame height
     diameter: float
+    strength: float = 0.0  # how far above its surroundings (0-255)
 
 
 def pixel_circularity(contour_area: float, perimeter: float) -> float:
@@ -48,11 +51,20 @@ def pixel_circularity(contour_area: float, perimeter: float) -> float:
 
 
 def bright_blobs(gray: np.ndarray, cfg: GlintConfig) -> list[Blob]:
-    """Small, near-saturated, round spots in one grayscale frame (PRD FR-1.2)."""
-    _, binary = cv2.threshold(gray, cfg.luma_threshold, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    if len(contours) > cfg.max_blobs_per_frame:
-        return []  # glare, not a lens
+    """Small round spots much brighter than their surroundings (FrameOps.brightSpots).
+
+    Local contrast = pixel minus the mean of a window_px box around it. With the torch
+    on, auto exposure darkens the frame, so a lens reflection may only reach ~220 but
+    still stands far above its background; large bright areas have almost no local
+    contrast. The strongest max_spots candidates are kept, so a busy frame never
+    hides the lens.
+    """
+    background = cv2.blur(gray, (cfg.window_px, cfg.window_px))
+    contrast = cv2.subtract(gray, background)  # saturates at 0
+    _, contrast_mask = cv2.threshold(contrast, cfg.min_contrast, 255, cv2.THRESH_BINARY)
+    _, luma_mask = cv2.threshold(gray, cfg.min_luma, 255, cv2.THRESH_BINARY)
+    mask = cv2.bitwise_and(contrast_mask, luma_mask)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     h, w = gray.shape[:2]
     blobs = []
     for c in contours:
@@ -66,8 +78,9 @@ def bright_blobs(gray: np.ndarray, cfg: GlintConfig) -> list[Blob]:
         if area >= cfg.circularity_min_area:
             if pixel_circularity(area, cv2.arcLength(c, True)) < cfg.min_circularity:
                 continue
-        blobs.append(Blob((x + bw / 2) / w, (y + bh / 2) / h, diameter))
-    return blobs
+        strength = float(contrast[y:y + bh, x:x + bw].max())
+        blobs.append(Blob((x + bw / 2) / w, (y + bh / 2) / h, diameter, strength))
+    return sorted(blobs, key=lambda b: -b.strength)[:cfg.max_spots]
 
 
 @dataclass

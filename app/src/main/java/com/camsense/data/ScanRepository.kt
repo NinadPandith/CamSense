@@ -52,7 +52,10 @@ class ScanRepository(
         val scan = dao.getScan(scanId) ?: return@withTransaction
         val netEntities = networkDevices.map {
             NetworkDeviceEntity(id = it.id, scanId = scanId, ip = it.ip, hostname = it.hostname,
-                mdnsName = it.mdnsName, ssdpServer = it.ssdpServer, openPorts = it.openPorts,
+                mdnsName = it.mdnsName,
+                // ONVIF replies share the ssdp_server column (no schema change).
+                ssdpServer = listOfNotNull(it.onvif, it.ssdpServer).joinToString(" | ").ifEmpty { null },
+                openPorts = it.openPorts,
                 banner = it.banner, isSelf = it.isSelf, isGateway = it.isGateway,
                 suspicionScore = it.suspicionScore)
         }

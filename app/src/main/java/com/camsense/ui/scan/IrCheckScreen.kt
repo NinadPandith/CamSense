@@ -22,6 +22,7 @@ fun IrCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit) 
     val askStop = scanStepGuard(vm, onStopped)
     val overlay by vm.modules.infrared.overlay.collectAsState()
     var acceptedBright by remember { mutableStateOf(false) }
+    val stats by vm.modules.infrared.stats.collectAsState()
 
     CameraStepScreen(
         step = 4,
@@ -46,5 +47,6 @@ fun IrCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit) 
                 onNext()
             }
         },
+        debugLine = stats.line(),
     )
 }

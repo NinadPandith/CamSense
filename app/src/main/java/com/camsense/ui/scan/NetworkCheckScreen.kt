@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
 import androidx.compose.material.icons.rounded.Router
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.camsense.R
 import com.camsense.core.ModuleResult
 import com.camsense.core.SkipReason
+import com.camsense.modules.network.Hotspot
 import com.camsense.modules.network.NetworkDevice
 import com.camsense.scoring.ScanConfig
 import com.camsense.ui.components.NoticeBanner
@@ -45,6 +47,8 @@ fun NetworkCheckScreen(vm: ScanViewModel, onContinue: () -> Unit, onAllowNearby:
     val devices by vm.modules.network.devices.collectAsState()
     val bleDevices by vm.modules.ble.devices.collectAsState()
     val progress by vm.modules.network.progress.collectAsState()
+    val lanSkip by vm.modules.network.lanSkip.collectAsState()
+    val hotspots by vm.modules.network.hotspots.collectAsState()
 
     ScanStepScreen(
         step = 2,
@@ -53,7 +57,8 @@ fun NetworkCheckScreen(vm: ScanViewModel, onContinue: () -> Unit, onAllowNearby:
         onStop = askStop,
         bottom = { TimedStepButton(stringResource(R.string.action_continue), ScanConfig.NETWORK_STEP_MIN_MS, onContinue) },
     ) {
-        val needsNearby = network.skipReason == SkipReason.NO_NEARBY_PERMISSION || ble.skipReason == SkipReason.NO_NEARBY_PERMISSION
+        val needsNearby = network.skipReason == SkipReason.NO_NEARBY_PERMISSION ||
+            ble.skipReason == SkipReason.NO_NEARBY_PERMISSION || lanSkip == SkipReason.NO_NEARBY_PERMISSION
         if (needsNearby) {
             NoticeBanner(stringResource(R.string.network_no_permission),
                 actionText = stringResource(R.string.action_allow), onAction = onAllowNearby)
@@ -61,7 +66,8 @@ fun NetworkCheckScreen(vm: ScanViewModel, onContinue: () -> Unit, onAllowNearby:
 
         Text(stringResource(R.string.network_wifi_header), style = CamSenseType.Heading, color = CamSenseColors.Text)
         when {
-            network.skipReason == SkipReason.NO_WIFI -> NoticeBanner(stringResource(R.string.network_not_on_wifi))
+            network.skipReason == SkipReason.NO_WIFI || lanSkip == SkipReason.NO_WIFI ->
+                NoticeBanner(stringResource(R.string.network_not_on_wifi))
             network.status == ModuleResult.Status.SKIPPED || network.status == ModuleResult.Status.FAILED -> Unit
             else -> {
                 if (network.status == ModuleResult.Status.RUNNING) {
@@ -76,6 +82,22 @@ fun NetworkCheckScreen(vm: ScanViewModel, onContinue: () -> Unit, onAllowNearby:
                     Text(stringResource(R.string.network_looking), style = CamSenseType.Body, color = CamSenseColors.TextMuted)
                 }
                 devices.forEach { DeviceRow(it) }
+            }
+        }
+
+        if (network.status != ModuleResult.Status.SKIPPED && network.status != ModuleResult.Status.FAILED) {
+            Text(stringResource(R.string.network_hotspots_header), style = CamSenseType.Heading, color = CamSenseColors.Text)
+            val flaggedNetworks = hotspots.filter { it.suspicionScore >= ScanConfig.NET_FINDING_MIN }
+            when {
+                hotspots.isEmpty() && network.status == ModuleResult.Status.RUNNING ->
+                    Text(stringResource(R.string.network_hotspots_looking), style = CamSenseType.Body, color = CamSenseColors.TextMuted)
+                else -> {
+                    Text(stringResource(R.string.network_hotspots_count, hotspots.size), style = CamSenseType.Body, color = CamSenseColors.Text)
+                    if (flaggedNetworks.isEmpty() && hotspots.isNotEmpty()) {
+                        Text(stringResource(R.string.network_hotspots_none_flagged), style = CamSenseType.Caption, color = CamSenseColors.TextMuted)
+                    }
+                    flaggedNetworks.forEach { HotspotRow(it) }
+                }
             }
         }
 
@@ -105,6 +127,7 @@ private fun DeviceRow(d: NetworkDevice) {
     val label = when {
         d.isSelf -> stringResource(R.string.device_you)
         d.isGateway -> stringResource(R.string.device_router)
+        d.onvif != null -> stringResource(R.string.device_security_camera)
         suspicious -> stringResource(R.string.device_possible_camera)
         else -> d.mdnsName ?: stringResource(R.string.device_unknown)
     }
@@ -126,6 +149,24 @@ private fun DeviceRow(d: NetworkDevice) {
             d.reason?.takeIf { suspicious }?.let { Text(it, style = CamSenseType.Caption, color = CamSenseColors.TextMuted) }
             val ports = if (d.openPorts.isEmpty()) "" else "  ·  " + d.openPorts.joinToString(", ")
             Text(d.ip + ports, style = CamSenseType.Data, color = CamSenseColors.TextMuted)
+        }
+    }
+}
+
+@Composable
+private fun HotspotRow(h: Hotspot) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+            .border(1.dp, CamSenseColors.MediumFill, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+    ) {
+        Icon(Icons.Rounded.Wifi, null, tint = CamSenseColors.MediumText, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f)) {
+            Text(h.ssid, style = CamSenseType.Body, color = CamSenseColors.Text)
+            h.reason?.let { Text(it, style = CamSenseType.Caption, color = CamSenseColors.TextMuted) }
+            Text("${h.level} dBm" + (h.vendor?.let { "  ·  $it" } ?: ""), style = CamSenseType.Data, color = CamSenseColors.TextMuted)
         }
     }
 }

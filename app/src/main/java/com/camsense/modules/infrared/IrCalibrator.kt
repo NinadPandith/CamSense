@@ -36,11 +36,7 @@ class IrCalibrator {
         try {
             val gray = FrameOps.grayUpright(image)
             try {
-                val blobs = FrameOps.brightBlobs(
-                    gray, ScanConfig.IR_LUMA_THRESHOLD, ScanConfig.IR_MIN_DIAMETER_PX,
-                    ScanConfig.IR_MAX_DIAMETER_PX * 2, minCircularity = 0.3f,
-                    circularityMinArea = ScanConfig.GLINT_CIRCULARITY_MIN_AREA, maxBlobs = 8,
-                )
+                val blobs = FrameOps.brightSpots(gray, ScanConfig.IR_CALIBRATION_SPOTS).spots
                 val visible = blobs.isNotEmpty()
                 if (visible && !spotVisible) risingEdges++
                 spotVisible = visible
@@ -51,7 +47,7 @@ class IrCalibrator {
             } finally {
                 gray.release()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w("CamSense/Infrared", "Calibration frame failed", e)
         } finally {
             image.close()

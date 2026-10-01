@@ -32,6 +32,8 @@ class ObjectDetector(private val context: Context) {
     private var inputScale = 1f
     private var inputZero = 0
     private var input: ByteBuffer? = null
+    private var output: ByteBuffer? = null
+    private var outValues: FloatArray? = null
     private var pixels = IntArray(0)
     private var loadFailed = false
 
@@ -84,12 +86,14 @@ class ObjectDetector(private val context: Context) {
         val shape = out.shape()
         val count = shape.fold(1) { a, b -> a * b }
         val outType = out.dataType()
-        val outBuf = ByteBuffer.allocateDirect(count * if (outType == DataType.FLOAT32) 4 else 1)
-            .order(ByteOrder.nativeOrder())
+        val bytes = count * if (outType == DataType.FLOAT32) 4 else 1
+        val outBuf = output?.takeIf { it.capacity() == bytes }
+            ?: ByteBuffer.allocateDirect(bytes).order(ByteOrder.nativeOrder()).also { output = it }
+        outBuf.rewind()
         interp.run(input!!.apply { rewind() }, outBuf)
         outBuf.rewind()
 
-        val values = FloatArray(count)
+        val values = outValues?.takeIf { it.size == count } ?: FloatArray(count).also { outValues = it }
         if (outType == DataType.FLOAT32) {
             outBuf.asFloatBuffer().get(values)
         } else {

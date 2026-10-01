@@ -15,8 +15,8 @@ import cv2
 from glint_core import BlobTracker, GlintConfig, bright_blobs
 
 IR_DARK_MAX_LUMA = 60.0   # ScanConfig.IR_DARK_MAX_LUMA
-IR_CFG = GlintConfig(luma_threshold=200.0, min_diameter_px=2, max_diameter_px=25,
-                     min_circularity=0.5, confirm_frames=4)
+IR_CFG = GlintConfig(min_luma=160.0, min_contrast=80.0, window_px=51, min_diameter_px=2, max_diameter_px=25,
+                     min_circularity=0.5, min_aspect=0.4, max_spots=15, confirm_frames=4)
 
 
 def main():

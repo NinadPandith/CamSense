@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.camsense.BuildConfig
 import com.camsense.R
 import com.camsense.core.camera.CameraOverlay
 import com.camsense.ui.theme.CamSenseColors
@@ -131,6 +132,8 @@ fun CameraStepScreen(
     preview: @Composable () -> Unit,
     banner: @Composable ColumnScope.() -> Unit,
     bottom: @Composable ColumnScope.() -> Unit,
+    /** Debug builds only: frames/second, brightness, spots, for tuning on real phones. */
+    debugLine: String? = null,
 ) {
     val chromeAlpha = if (dim) 0.7f else 1f
     Box(Modifier.fillMaxSize().background(CamSenseColors.Background)) {
@@ -153,6 +156,15 @@ fun CameraStepScreen(
                 content = banner,
             )
             Spacer(Modifier.weight(1f))
+            if (BuildConfig.DEBUG && !debugLine.isNullOrEmpty()) {
+                Text(
+                    debugLine,
+                    style = CamSenseType.Caption,
+                    color = CamSenseColors.Text,
+                    modifier = Modifier.padding(horizontal = Spacing.screen)
+                        .background(CamSenseColors.Background.copy(alpha = 0.7f)).padding(4.dp),
+                )
+            }
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.l).alpha(chromeAlpha),
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),

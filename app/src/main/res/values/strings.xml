@@ -33,7 +33,7 @@
     <string name="permission_camera">Camera</string>
     <string name="permission_camera_copy">Your camera finds lens reflections and night-vision lights. Images never leave your phone.</string>
     <string name="permission_nearby">Nearby devices</string>
-    <string name="permission_location">Location (for Bluetooth)</string>
+    <string name="permission_location">Location (for Wi-Fi and Bluetooth)</string>
     <string name="permission_nearby_copy">This lets CamSense check the Wi-Fi and Bluetooth around you for camera-like devices.</string>
     <string name="permission_granted">Allowed</string>
     <string name="permission_denied">Not allowed</string>
@@ -66,6 +66,11 @@
     <string name="network_instruction">Looking at this Wi-Fi and Bluetooth. Keep going while it runs.</string>
     <string name="network_wifi_header">On this Wi-Fi</string>
     <string name="network_bluetooth_header">Bluetooth nearby</string>
+    <string name="network_hotspots_header">Wi-Fi networks nearby</string>
+    <string name="network_hotspots_count">%1$d Wi-Fi networks nearby</string>
+    <string name="network_hotspots_none_flagged">None look like a camera's own network.</string>
+    <string name="network_hotspots_looking">Looking for nearby networks…</string>
+    <string name="device_security_camera">Security camera</string>
     <string name="network_looking">Looking for devices…</string>
     <string name="network_bluetooth_count">%1$d Bluetooth devices nearby</string>
     <string name="network_bluetooth_flagged">%1$d look like cameras or are very close</string>
@@ -222,9 +227,9 @@
     <!-- About and limits -->
     <string name="about_title">About and limits</string>
     <string name="about_intro">CamSense runs 6 checks on your phone and combines them into one result. Nothing is uploaded.</string>
-    <string name="about_glint">Lens check: the flashlight makes camera lenses shine as tiny bright points.</string>
+    <string name="about_glint">Lens check: the flashlight makes camera lenses shine as tiny bright points. The flash blinks off for a moment to tell a lens from a lamp.</string>
     <string name="about_infrared">Night-vision check: the front camera can see the infrared lights some cameras use in the dark.</string>
-    <string name="about_network">Wi-Fi check: looks for devices on the same Wi-Fi that stream video.</string>
+    <string name="about_network">Wi-Fi check: looks for devices on this Wi-Fi that stream video or answer as security cameras, and for nearby Wi-Fi networks set up by cameras.</string>
     <string name="about_ble">Bluetooth check: looks for nearby camera-like Bluetooth devices.</string>
     <string name="about_magnet">Close check: the magnetometer reacts to electronics a few centimetres away.</string>
     <string name="about_objects">Hiding-spot check: points out objects where cameras are often hidden.</string>
