@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- All on-screen copy, from the Content Guidelines copy library where it exists.
+     Sentence case, verbs on buttons, no exclamation marks, no "please", digits for numbers. -->
+<resources>
+    <string name="app_name">CamSense</string>
+
+    <!-- Common -->
+    <string name="action_next">Next</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_back">Back</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_not_now">Not now</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_keep">Keep</string>
+    <string name="action_try_again">Try again</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="step_of">Step %1$d of 6</string>
+    <string name="unlocks_in">Ready in %1$d s</string>
+    <string name="limits_caption">CamSense raises the chance of finding a camera but can\'t guarantee it.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_1_title">Check any room for hidden cameras</string>
+    <string name="onboarding_1_body">CamSense uses your phone\'s camera, flashlight and sensors to look for signs of a camera. Everything stays on your phone.</string>
+    <string name="onboarding_2_title">Six checks, one result</string>
+    <string name="onboarding_2_body">A guided scan walks you through each check in about 5 minutes, then shows Low, Medium or High risk with the reasons.</string>
+    <string name="onboarding_3_title">What a phone can and can\'t find</string>
+    <string name="onboarding_3_body">Wired cameras that record to a card can show no signal at all. A Low result means no clear signs were found, not that the room is camera-free.</string>
+
+    <!-- Permissions -->
+    <string name="permissions_title">Before you scan</string>
+    <string name="permissions_intro">CamSense asks for 2 permissions. You can still scan without them; those checks will be skipped.</string>
+    <string name="permission_camera">Camera</string>
+    <string name="permission_camera_copy">Your camera finds lens reflections and night-vision lights. Images never leave your phone.</string>
+    <string name="permission_nearby">Nearby devices</string>
+    <string name="permission_location">Location (for Bluetooth)</string>
+    <string name="permission_nearby_copy">This lets CamSense check the Wi-Fi and Bluetooth around you for camera-like devices.</string>
+    <string name="permission_granted">Allowed</string>
+    <string name="permission_denied">Not allowed</string>
+
+    <!-- IR calibration -->
+    <string name="ir_cal_title">Test infrared</string>
+    <string name="ir_cal_instruction">Point a TV remote at your screen and press any button.</string>
+    <string name="ir_cal_detected">Your front camera can see infrared. The night-vision check will run in your scans.</string>
+    <string name="ir_cal_not_detected">No glow seen. The night-vision check will be skipped; you can test again in Settings.</string>
+
+    <!-- Home -->
+    <string name="home_title">Check this room</string>
+    <string name="home_body">Takes about 5 minutes. Everything stays on your phone.</string>
+    <string name="home_start">Start scan</string>
+    <string name="home_recent">Recent scans</string>
+    <string name="home_see_all">See all</string>
+    <string name="home_history">Scan history</string>
+    <string name="home_settings">Settings</string>
+    <string name="battery_low_title">Battery is low</string>
+    <string name="battery_low_body">A full scan uses the camera and flashlight. Plug in if you can.</string>
+    <string name="battery_low_start">Start anyway</string>
+
+    <!-- 1. Place name -->
+    <string name="place_title">Where are you?</string>
+    <string name="place_instruction">Add a name so you can find this scan later.</string>
+    <string name="place_hint">e.g. Hotel Sunrise, room 204</string>
+
+    <!-- 2. Network check -->
+    <string name="network_title">Checking nearby devices</string>
+    <string name="network_instruction">Looking at this Wi-Fi and Bluetooth. Keep going while it runs.</string>
+    <string name="network_wifi_header">On this Wi-Fi</string>
+    <string name="network_bluetooth_header">Bluetooth nearby</string>
+    <string name="network_looking">Looking for devices…</string>
+    <string name="network_bluetooth_count">%1$d Bluetooth devices nearby</string>
+    <string name="network_bluetooth_flagged">%1$d look like cameras or are very close</string>
+    <string name="device_you">Your phone</string>
+    <string name="device_router">Router</string>
+    <string name="device_unknown">Device</string>
+    <string name="device_possible_camera">Possible camera</string>
+    <string name="network_not_on_wifi">You\'re not on Wi-Fi, so the network check was skipped. Join the room\'s Wi-Fi to include it.</string>
+    <string name="network_no_permission">Without Nearby devices access, the Wi-Fi and Bluetooth checks are skipped.</string>
+    <string name="network_bluetooth_off">Bluetooth is off, so the Bluetooth check is skipped.</string>
+
+    <!-- 3. Room sweep -->
+    <string name="room_title">Sweep the room</string>
+    <string name="room_instruction">Move slowly around the room. CamSense marks places cameras often hide.</string>
+    <string name="room_button">Done sweeping</string>
+    <string name="room_check_this">Check this</string>
+
+    <!-- 4a. IR check -->
+    <string name="ir_title">Turn off the lights</string>
+    <string name="ir_instruction">Point your screen side around the room. Look for glowing dots.</string>
+
+    <!-- 4b. Lens check -->
+    <string name="lens_title">Look for reflections</string>
+    <string name="lens_instruction">Flashlight is on. Scan slowly; watch for tiny bright points.</string>
+    <string name="lens_button">Done</string>
+    <string name="lens_take_photo">Take photo</string>
+    <string name="lens_photo_saved">Photo kept for evidence</string>
+
+    <!-- 5. Close check -->
+    <string name="close_title">Check flagged spots</string>
+    <string name="close_instruction">Hold your phone close to each one. Faster beeps mean more electronics.</string>
+    <string name="close_free_sweep">Hold your phone near anything you\'re unsure about.</string>
+    <string name="close_button">See results</string>
+    <string name="close_calibrating">Hold your phone away from objects for 3 seconds.</string>
+    <string name="close_reset">Reset baseline</string>
+    <string name="close_rise">Field rise</string>
+    <string name="close_pick_spot">Tap the spot you\'re holding the phone near.</string>
+    <string name="close_no_magnetometer">Your phone has no magnetometer, so the close check was skipped.</string>
+    <string name="close_strongest">Strongest so far</string>
+
+    <!-- Camera banners -->
+    <string name="banner_too_bright">It\'s too bright for this check. Turn off the lights and close the curtains.</string>
+    <string name="banner_continue_anyway">Continue anyway</string>
+    <string name="banner_too_fast">Slow down a little so the camera can keep up.</string>
+    <string name="overlay_glint_found">Possible lens found, %1$s.</string>
+    <string name="overlay_ir_found">Glowing dot found, %1$s.</string>
+    <string name="overlay_object_found">%1$s, %2$s. Check this.</string>
+    <string name="stop_scan">Stop scan</string>
+
+    <!-- Stop dialog -->
+    <string name="stop_title">Stop this scan?</string>
+    <string name="stop_body">Results so far won\'t be saved.</string>
+    <string name="stop_confirm">Stop</string>
+    <string name="stop_keep">Keep scanning</string>
+
+    <!-- 6. Results -->
+    <string name="risk_low">Low risk</string>
+    <string name="risk_medium">Medium risk</string>
+    <string name="risk_high">High risk</string>
+    <string name="summary_low">No clear signs of a camera found.</string>
+    <string name="summary_medium">Some signs found. Check the spots below.</string>
+    <string name="summary_high">Strong signs of a hidden camera.</string>
+    <string name="next_low">Stay alert. Some cameras can\'t be found by any phone.</string>
+    <string name="next_medium">Look closely at each flagged spot, then scan again.</string>
+    <string name="next_high">Don\'t touch the object. Save evidence, leave the room, and report it to the manager or police.</string>
+    <string name="results_why">Why</string>
+    <string name="results_what_to_do">What to do</string>
+    <string name="results_skipped">Skipped checks</string>
+    <string name="results_low_all_ran">All 6 checks ran; nothing stood out.</string>
+    <string name="results_low_some_ran">%1$d of 6 checks ran; nothing stood out.</string>
+    <string name="results_checked_count">%1$d of %2$d checked</string>
+    <string name="results_done">Done</string>
+    <string name="results_scan_another">Scan another room</string>
+    <string name="results_check_spots">Check flagged spots</string>
+    <string name="results_scan_again">Scan again</string>
+    <string name="results_save_evidence">Save evidence</string>
+    <string name="results_get_help">Get help</string>
+    <string name="results_evidence">Evidence</string>
+    <string name="results_delete_scan">Delete scan</string>
+    <string name="results_delete_title">Delete this scan?</string>
+    <string name="results_delete_body">This deletes the scan and its evidence. You can\'t undo this.</string>
+    <string name="results_deleted">Scan deleted</string>
+    <string name="results_more">More options</string>
+    <string name="verdict_checked">Checked, it\'s fine</string>
+    <string name="verdict_confirmed">Looks like a camera</string>
+    <string name="verdict_badge_checked">Checked</string>
+    <string name="verdict_badge_confirmed">Marked as a camera</string>
+    <string name="finding_confidence">Confidence %1$d%%</string>
+    <string name="finding_details">Details</string>
+
+    <!-- Skip reasons -->
+    <string name="skip_no_wifi">You\'re not on Wi-Fi, so the network check was skipped. Join the room\'s Wi-Fi to include it.</string>
+    <string name="skip_ir_not_supported">Your phone\'s front camera can\'t see infrared, so this check was skipped. Other checks still work.</string>
+    <string name="skip_no_camera">Without camera access, the lens and IR checks can\'t run. Allow it in Settings.</string>
+    <string name="skip_no_nearby">Without Nearby devices access, this check was skipped. Allow it in Settings.</string>
+    <string name="skip_no_bluetooth">Bluetooth is off, so the Bluetooth check was skipped.</string>
+    <string name="skip_no_magnetometer">Your phone has no magnetometer, so the close check was skipped.</string>
+    <string name="skip_model">The object check couldn\'t start, so it was skipped.</string>
+    <string name="skip_not_reached">This check didn\'t run.</string>
+    <string name="skip_failed">This check stopped early. Scan again to include it.</string>
+
+    <!-- Module names -->
+    <string name="module_glint">Lens check</string>
+    <string name="module_infrared">Night-vision check</string>
+    <string name="module_network">Wi-Fi check</string>
+    <string name="module_ble">Bluetooth check</string>
+    <string name="module_magnet">Close check</string>
+    <string name="module_objects">Hiding-spot check</string>
+
+    <!-- Evidence -->
+    <string name="evidence_title">Evidence</string>
+    <string name="evidence_saved">Evidence saved. Find it in History.</string>
+    <string name="evidence_storage_full">Couldn\'t save evidence. Free up space and try again.</string>
+    <string name="evidence_back">Back to results</string>
+    <string name="evidence_place">Place</string>
+    <string name="evidence_time">Time</string>
+    <string name="evidence_hash">SHA-256</string>
+    <string name="evidence_report">Scan report</string>
+    <string name="evidence_none">No evidence saved for this scan yet.</string>
+    <string name="evidence_where">Saved only on this phone, in CamSense\'s private storage.</string>
+
+    <!-- Get help -->
+    <string name="help_title">Get help</string>
+    <string name="help_emergency">Emergency</string>
+    <string name="help_emergency_number">112</string>
+    <string name="help_cyber">Cybercrime helpline</string>
+    <string name="help_cyber_number">1930</string>
+    <string name="help_report">Report online</string>
+    <string name="help_report_site">cybercrime.gov.in</string>
+    <string name="help_tip">Don\'t touch the object; keep your saved evidence.</string>
+
+    <!-- History -->
+    <string name="history_title">Scan history</string>
+    <string name="history_empty">Your scans will show up here. Start your first scan.</string>
+    <string name="history_unnamed">Unnamed place</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_recalibrate">Recalibrate IR</string>
+    <string name="settings_recalibrate_status_yes">Your front camera can see infrared</string>
+    <string name="settings_recalibrate_status_no">Night-vision check is off on this phone</string>
+    <string name="settings_recalibrate_status_unknown">Not tested yet</string>
+    <string name="settings_permissions">Permissions</string>
+    <string name="settings_about">About and limits</string>
+    <string name="settings_get_help">Get help</string>
+    <string name="settings_delete_all">Delete all data</string>
+    <string name="settings_delete_all_title">Delete all data?</string>
+    <string name="settings_delete_all_body">This deletes every scan and its evidence. You can\'t undo this.</string>
+    <string name="settings_deleted_all">All scans deleted</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_load_sample">Load sample scan (debug)</string>
+    <string name="settings_sample_loaded">Sample scan added to History</string>
+
+    <!-- About and limits -->
+    <string name="about_title">About and limits</string>
+    <string name="about_intro">CamSense runs 6 checks on your phone and combines them into one result. Nothing is uploaded.</string>
+    <string name="about_glint">Lens check: the flashlight makes camera lenses shine as tiny bright points.</string>
+    <string name="about_infrared">Night-vision check: the front camera can see the infrared lights some cameras use in the dark.</string>
+    <string name="about_network">Wi-Fi check: looks for devices on the same Wi-Fi that stream video.</string>
+    <string name="about_ble">Bluetooth check: looks for nearby camera-like Bluetooth devices.</string>
+    <string name="about_magnet">Close check: the magnetometer reacts to electronics a few centimetres away.</string>
+    <string name="about_objects">Hiding-spot check: points out objects where cameras are often hidden.</string>
+    <string name="about_limits_title">What no phone can catch</string>
+    <string name="about_limits">Wired cameras without night vision that record to a memory card give off no Wi-Fi, Bluetooth or infrared signal. Look closely at the spots CamSense marks, and treat a Low result as no clear signs, not a guarantee.</string>
+</resources>

@@ -1,0 +1,17 @@
+# Dataset for the 8 hiding-object classes (PRD FR-6.2). Export from Roboflow in
+# "YOLO" format into ml/dataset/ (not committed). Keep this class order in sync with
+# app/src/main/assets/models/labels.txt and ScanConfig.HIDING_OBJECTS.
+path: dataset
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: smoke_detector
+  1: usb_charger
+  2: wall_clock
+  3: photo_frame
+  4: tissue_box
+  5: air_purifier
+  6: alarm_clock
+  7: wall_hole

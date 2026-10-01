@@ -1,0 +1,34 @@
+# Trimmed IEEE OUI list: camera and IoT chip makers only (Tech Stack doc).
+# camera=1 means the vendor mainly makes cameras or camera modules.
+# Starter entries only: check each against https://standards-oui.ieee.org/oui/oui.csv before release.
+prefix,vendor,camera
+C0:56:E3,Hangzhou Hikvision,1
+44:19:B6,Hangzhou Hikvision,1
+BC:AD:28,Hangzhou Hikvision,1
+4C:BD:8F,Hangzhou Hikvision,1
+3C:EF:8C,Zhejiang Dahua,1
+90:02:A9,Zhejiang Dahua,1
+E0:50:8B,Zhejiang Dahua,1
+9C:8E:CD,Amcrest,1
+EC:71:DB,Reolink,1
+00:62:6E,Shenzhen Uniview,1
+E8:AB:FA,Shenzhen Reecam (Wansview),1
+2C:AA:8E,Wyze Labs,1
+7C:78:B2,Wyze Labs,1
+A4:DA:22,Ezviz,1
+24:0A:C4,Espressif (ESP32),0
+30:AE:A4,Espressif (ESP32),0
+A4:CF:12,Espressif (ESP32),0
+84:F3:EB,Espressif,0
+DC:4F:22,Espressif,0
+AC:67:B2,Espressif,0
+7C:DF:A1,Espressif,0
+D8:F1:5B,Espressif,0
+48:3F:DA,Espressif,0
+00:E0:4C,Realtek,0
+E4:F1:4C,Realtek,0
+B0:A7:32,Espressif,0
+50:02:91,Espressif,0
+68:57:2D,Tuya (Hangzhou),0
+D8:1F:12,Tuya (Hangzhou),0
+84:E3:42,Tuya (Hangzhou),0

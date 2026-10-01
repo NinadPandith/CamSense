@@ -1,0 +1,26 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+*.keystore
+*.jks
+# Python
+__pycache__/
+.venv/
+*.pyc
+ml/runs/
+ml/dataset/
+prototype/clips/
+*.pt
+
+# offline check
+tools/offline-check/libs/
+tools/offline-check/build/
+tools/offline-check/.gradle/
+tools/offline-check/.kotlin/
