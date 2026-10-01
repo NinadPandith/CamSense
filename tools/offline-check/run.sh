@@ -18,4 +18,5 @@ fetch $M/org/robolectric/android-all/16-robolectric-13921718/android-all-16-robo
 aar_classes $M/org/opencv/opencv/4.14.0/opencv-4.14.0.aar libs/opencv.jar
 aar_classes $M/org/tensorflow/tensorflow-lite/2.16.1/tensorflow-lite-2.16.1.aar libs/tflite.jar
 aar_classes $M/org/tensorflow/tensorflow-lite-api/2.16.1/tensorflow-lite-api-2.16.1.aar libs/tflite-api.jar
+python3 check_resources.py
 gradle compileKotlin test --console=plain "$@"

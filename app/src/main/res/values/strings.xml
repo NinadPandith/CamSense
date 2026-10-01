@@ -68,7 +68,7 @@
     <string name="network_bluetooth_header">Bluetooth nearby</string>
     <string name="network_hotspots_header">Wi-Fi networks nearby</string>
     <string name="network_hotspots_count">%1$d Wi-Fi networks nearby</string>
-    <string name="network_hotspots_none_flagged">None look like a camera's own network.</string>
+    <string name="network_hotspots_none_flagged">None look like a camera\'s own network.</string>
     <string name="network_hotspots_looking">Looking for nearby networks…</string>
     <string name="device_security_camera">Security camera</string>
     <string name="network_looking">Looking for devices…</string>
