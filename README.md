@@ -32,22 +32,18 @@ Docs: [PRD](docs/prd.md) · [App flow](docs/app-flow.md) · [Tech stack](docs/te
    has no torch, magnetometer or BLE, so it can't test this app.
 3. Run the `app` configuration.
 
-The AI check needs a model in `app/src/main/assets/models/` (see below). Without it
-the app still works: the room sweep is skipped and Results says so.
-
 ### AI model
 
-Stock model for now (Implementation Plan, Day 4):
+`app/src/main/assets/models/` ships the stock YOLO26n model (COCO, float32, 10 MB,
+input [1, 3, 640, 640]) exported with `ml/export.py yolo26n.pt --stock`. The app shows
+only the classes in `ScanConfig.HIDING_OBJECTS` (clock, book, TV, phone, vase, plant pot).
 
-```bash
-cd ml && pip install -r requirements.txt
-python export.py yolo26n.pt --stock     # writes the .tflite and labels.txt into assets/models
-```
+On Day 6–7, train the 8-class model with `ml/train.py` or `ml/notebooks/train_colab.ipynb`
+and export it with `python export.py runs/detect/train/weights/best.pt` (INT8, calibrated on
+your dataset). It replaces the same two files; no code changes are needed. If the model is
+missing or fails to load, the room sweep is skipped and Results says so.
 
-The app shows only the classes listed in `ScanConfig.HIDING_OBJECTS` (clock, book,
-TV, phone, vase, plant pot for the stock model). On Day 6–7, train the 8-class model
-with `ml/train.py` or `ml/notebooks/train_colab.ipynb` and export it the same way
-(without `--stock`); no code changes are needed.
+Ultralytics models are AGPL-3.0: fine for a student project, check before any commercial release.
 
 ### Demo setup
 

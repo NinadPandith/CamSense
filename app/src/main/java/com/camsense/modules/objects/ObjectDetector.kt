@@ -26,6 +26,8 @@ class ObjectDetector(private val context: Context) {
     private var post: YoloPostProcessor? = null
     private var labels: List<String> = emptyList()
     private var inputSize = 640
+    /** LiteRT-Torch exports keep PyTorch's [1, 3, H, W]; TF-based exports use [1, H, W, 3]. */
+    private var channelsFirst = false
     private var inputType = DataType.FLOAT32
     private var inputScale = 1f
     private var inputZero = 0
@@ -50,7 +52,9 @@ class ObjectDetector(private val context: Context) {
             }
             val interp = Interpreter(model, Interpreter.Options().setNumThreads(4))
             val inTensor = interp.getInputTensor(0)
-            inputSize = inTensor.shape()[1]
+            val inShape = inTensor.shape()
+            channelsFirst = inShape[1] == 3 && inShape[3] != 3
+            inputSize = if (channelsFirst) inShape[2] else inShape[1]
             inputType = inTensor.dataType()
             inputScale = inTensor.quantizationParams().scale.takeIf { it > 0f } ?: 1f
             inputZero = inTensor.quantizationParams().zeroPoint
@@ -60,7 +64,7 @@ class ObjectDetector(private val context: Context) {
             post = YoloPostProcessor(labels, ScanConfig.OBJECT_MIN_CONFIDENCE, ScanConfig.OBJECT_NMS_IOU,
                 ScanConfig.OBJECT_MAX_DETECTIONS)
             interpreter = interp
-            Log.i(TAG, "Model loaded: input $inputSize px $inputType, output ${interp.getOutputTensor(0).shape().contentToString()}, ${labels.size} labels")
+            Log.i(TAG, "Model loaded: input $inputSize px $inputType ${if (channelsFirst) "NCHW" else "NHWC"}, output ${interp.getOutputTensor(0).shape().contentToString()}, ${labels.size} labels")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Model failed to load", e)
@@ -108,16 +112,27 @@ class ObjectDetector(private val context: Context) {
         canvasBmp.getPixels(pixels, 0, inputSize, 0, 0, inputSize, inputSize)
         canvasBmp.recycle()
         val buf = input!!.apply { rewind() }
-        for (p in pixels) {
-            val r = (p shr 16) and 0xFF
-            val g = (p shr 8) and 0xFF
-            val b = p and 0xFF
-            when (inputType) {
-                DataType.FLOAT32 -> { buf.putFloat(r / 255f); buf.putFloat(g / 255f); buf.putFloat(b / 255f) }
-                DataType.UINT8 -> { buf.put(r.toByte()); buf.put(g.toByte()); buf.put(b.toByte()) }
-                else -> { buf.put(quant(r)); buf.put(quant(g)); buf.put(quant(b)) }
+        val n = inputSize * inputSize
+        // Index of channel c of pixel i in either layout.
+        fun at(i: Int, c: Int) = if (channelsFirst) c * n + i else i * 3 + c
+        if (inputType == DataType.FLOAT32) {
+            val fb = buf.asFloatBuffer()
+            for (i in 0 until n) {
+                val p = pixels[i]
+                fb.put(at(i, 0), ((p shr 16) and 0xFF) / 255f)
+                fb.put(at(i, 1), ((p shr 8) and 0xFF) / 255f)
+                fb.put(at(i, 2), (p and 0xFF) / 255f)
+            }
+        } else {
+            for (i in 0 until n) {
+                val p = pixels[i]
+                for (c in 0..2) {
+                    val v = (p shr (16 - 8 * c)) and 0xFF // c = 0, 1, 2 -> R, G, B
+                    buf.put(at(i, c), if (inputType == DataType.UINT8) v.toByte() else quant(v))
+                }
             }
         }
+        buf.rewind()
     }
 
     private fun quant(channel: Int): Byte =

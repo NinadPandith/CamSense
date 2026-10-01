@@ -20,17 +20,19 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("weights")
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--stock", action="store_true", help="COCO model: skip INT8 calibration data")
+    p.add_argument("--stock", action="store_true", help="stock COCO model: exported as float (INT8 needs real calibration images)")
     p.add_argument("--float", action="store_true", help="float32 instead of INT8 (bigger, simpler)")
     p.add_argument("--data", default="data.yaml")
     a = p.parse_args()
 
     model = YOLO(a.weights)
-    kwargs = dict(format="tflite", imgsz=a.imgsz)
-    if not a.float:
-        kwargs["int8"] = True
-        if not a.stock:
-            kwargs["data"] = a.data  # calibration images for INT8
+    # Ultralytics 8.4 exports through LiteRT-Torch; input stays [1, 3, H, W] (the app handles both).
+    kwargs = dict(format="litert", imgsz=a.imgsz)
+    if not a.float and not a.stock:
+        # INT8 is ~3.5x smaller and ~2x faster, but needs your dataset for calibration:
+        # calibrated on only a few images it flattened every confidence to about 0.70.
+        kwargs["quantize"] = 8
+        kwargs["data"] = a.data
     out = Path(model.export(**kwargs))
     if out.is_dir():  # some versions return the saved_model folder
         candidates = sorted(out.glob("*int8.tflite" if not a.float else "*float32.tflite")) or sorted(out.glob("*.tflite"))
