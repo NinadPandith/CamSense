@@ -97,6 +97,7 @@
     <string name="lens_instruction">Flashlight is on. Scan slowly; watch for tiny bright points.</string>
     <string name="lens_button">Done</string>
     <string name="lens_take_photo">Take photo</string>
+    <string name="lens_flash_checking">Checking a reflection. Hold still.</string>
     <string name="lens_photo_saved">Photo kept for evidence</string>
 
     <!-- 5. Close check -->

@@ -171,8 +171,18 @@ object ScanConfig {
     const val FLASH_LATENCY_FRAMES = 3
     /** Frames measured with the torch off. */
     const val FLASH_SAMPLE_FRAMES = 4
-    /** Frames to let exposure settle after the torch is back on. */
-    const val FLASH_SETTLE_FRAMES = 4
+    /**
+     * Frames to let exposure settle after the torch is back on (~0.4 s). With only 4,
+     * the over-bright frames after the blink made new "spots" that started new tests:
+     * the torch blinked in a loop on a real phone.
+     */
+    const val FLASH_SETTLE_FRAMES = 12
+    /** At most one flash test per this many milliseconds... */
+    const val FLASH_COOLDOWN_MS = 2_000L
+    /** ...and at most this many per lens check. */
+    const val FLASH_MAX_TESTS = 6
+    /** A spot this close (fraction of frame) to an already tested place reuses its result. */
+    const val FLASH_SAME_PLACE_DISTANCE = 0.06f
     /** Torch-off brightness / torch-on brightness at or below this: a lens reflection. */
     const val FLASH_LENS_RATIO = 0.5
     /** At or above this: a light source, not a reflection (finding dropped). */

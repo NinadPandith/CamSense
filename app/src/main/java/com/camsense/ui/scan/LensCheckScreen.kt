@@ -35,6 +35,7 @@ fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit
     val objects by vm.modules.objects.overlay.collectAsState()
     var acceptedBright by remember { mutableStateOf(false) }
     val stats by vm.modules.glint.stats.collectAsState()
+    val flashTesting by vm.modules.glint.flashTesting.collectAsState()
     val overlay = if (objects.frameWidth == glint.frameWidth && objects.frameHeight == glint.frameHeight)
         glint.copy(marks = objects.marks + glint.marks) else glint
 
@@ -54,7 +55,9 @@ fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit
             )
         },
         banner = {
-            if (glint.tooBright && !acceptedBright) {
+            if (flashTesting) {
+                NoticeBanner(stringResource(R.string.lens_flash_checking))
+            } else if (glint.tooBright && !acceptedBright) {
                 NoticeBanner(stringResource(R.string.banner_too_bright),
                     actionText = stringResource(R.string.banner_continue_anyway),
                     onAction = { acceptedBright = true; vm.modules.glint.brightRoomAccepted = true })

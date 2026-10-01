@@ -72,6 +72,12 @@ class GlintModule(
         ScanConfig.FLASH_LATENCY_FRAMES, ScanConfig.FLASH_SAMPLE_FRAMES, ScanConfig.FLASH_SETTLE_FRAMES,
         ScanConfig.FLASH_LENS_RATIO, ScanConfig.FLASH_LIGHT_RATIO,
     )
+    private val scheduler = FlashScheduler(
+        ScanConfig.FLASH_COOLDOWN_MS, ScanConfig.FLASH_MAX_TESTS, ScanConfig.FLASH_SAME_PLACE_DISTANCE,
+    )
+    private val _flashTesting = MutableStateFlow(false)
+    /** True while the torch is briefly off for a flash-blink test ("Checking a reflection"). */
+    val flashTesting: StateFlow<Boolean> = _flashTesting.asStateFlow()
     private val motion = MotionMeter(ScanConfig.MOTION_FRAME_SIZE)
     private val sceneMotion = SceneMotion(ScanConfig.SCENE_MOTION_WIDTH)
     private val parallax = ParallaxCheck(ScanConfig.PARALLAX_MIN_SCENE_MOTION, ScanConfig.PARALLAX_MAX_RATIO)
@@ -94,6 +100,7 @@ class GlintModule(
         motion.reset()
         sceneMotion.reset()
         parallax.reset()
+        scheduler.reset()
         markRunning()
     }
 
@@ -103,6 +110,7 @@ class GlintModule(
             torch = null
             if (flash.active) flash.cancel()
             flashTrack = null
+            _flashTesting.value = false
             return
         }
         torch = { on -> camera.cameraControl.enableTorch(on) }
@@ -162,6 +170,7 @@ class GlintModule(
         }
 
         val (sceneDx, sceneDy) = sceneMotion.update(gray)
+        scheduler.onSceneShift(sceneDx, sceneDy)
         val found = FrameOps.brightSpots(gray, ScanConfig.GLINT_SPOTS)
         val update = tracker.update(found.spots)
         // Angle test on every spot seen in this frame.
@@ -172,8 +181,15 @@ class GlintModule(
             }
         }
         for (t in update.newlyConfirmed) {
+            // Same place as an earlier flash test (e.g. panned past it again): reuse the result, no new blink.
+            val earlier = scheduler.testedNear(t.x, t.y)
+            if (earlier != null) {
+                keyByTrack[t.id] = earlier.key
+                if (earlier.verdict == FlashCheck.Verdict.LIGHT_SOURCE) { rejectedTracks += t.id; continue }
+                if (earlier.key in findingsByKey) continue
+            }
             val objectKey = objects?.objectKeyAt(t.x, t.y)
-            val key = objectKey ?: "glint-${++glintCount}"
+            val key = earlier?.key ?: objectKey ?: "glint-${++glintCount}"
             keyByTrack[t.id] = key
             val reason = objectKey?.let { k -> objects.nameFor(k)?.let(Reasons::glintOn) } ?: Reasons.GLINT
             val existing = findingsByKey[key]
@@ -186,7 +202,7 @@ class GlintModule(
             )
             findingsByKey[key] = finding
             if (existing == null) saveSnapshot(finding.id, bitmap())
-            flashQueue.addLast(t.id)
+            if (earlier == null) flashQueue.addLast(t.id)
             Log.i(tag, "Glint confirmed at %.2f,%.2f (%.0f px, contrast %.0f) -> %s".format(
                 t.x, t.y, t.diameterPx, found.spots.firstOrNull { it.x == t.x && it.y == t.y }?.strength ?: 0f, key))
         }
@@ -218,11 +234,16 @@ class GlintModule(
     /** Starts the flash-blink test for the next confirmed glint that is still in view. */
     private fun startNextFlashTest(gray: Mat, visible: List<BlobTracker.Track>) {
         val switch = torch ?: return
+        val now = System.currentTimeMillis()
+        if (!scheduler.mayStart(now)) return // cooldown, or enough tests this step
         while (flashQueue.isNotEmpty()) {
             val id = flashQueue.removeFirst()
             val track = visible.firstOrNull { it.id == id && it.id !in rejectedTracks } ?: continue
+            if (scheduler.testedNear(track.x, track.y) != null) continue
             val brightness = FrameOps.peakAround(gray, track.x, track.y, ScanConfig.FLASH_SAMPLE_RADIUS_PX)
             flashTrack = track
+            scheduler.started(now)
+            _flashTesting.value = true
             switch(flash.begin(brightness) == FlashCheck.Torch.ON)
             return
         }
@@ -230,8 +251,10 @@ class GlintModule(
 
     private fun applyVerdict(track: BlobTracker.Track, verdict: FlashCheck.Verdict, ratio: Double) {
         flashTrack = null
+        _flashTesting.value = false
         val key = keyByTrack[track.id] ?: return
-        Log.i(tag, "Flash test $key: $verdict (torch-off/on brightness %.2f)".format(ratio))
+        scheduler.record(track.x, track.y, key, verdict)
+        Log.i(tag, "Flash test $key: $verdict (torch-off/on brightness %.2f, test ${scheduler.testsRun})".format(ratio))
         val f = findingsByKey[key] ?: return
         when (verdict) {
             FlashCheck.Verdict.LENS -> {
@@ -265,6 +288,7 @@ class GlintModule(
         if (flashTrack?.id == t.id && flash.active) {
             flash.cancel()
             flashTrack = null
+            _flashTesting.value = false
             torch?.invoke(true)
         }
         publishFindings()
@@ -313,6 +337,7 @@ class GlintModule(
             flash.cancel()
             torch?.invoke(true)
         }
+        _flashTesting.value = false
         finish()
     }
 
