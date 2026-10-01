@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions
 cd /d "%~dp0"
 title CamSense - build and install
 echo.
@@ -45,7 +45,7 @@ set "ADB=%ANDROID_HOME%\platform-tools\adb.exe"
 
 rem Gradle reads the SDK location from local.properties (backslashes doubled).
 set "SDK_ESCAPED=%ANDROID_HOME:\=\\%"
-> local.properties echo sdk.dir=!SDK_ESCAPED!
+> local.properties echo sdk.dir=%SDK_ESCAPED%
 
 rem ---------------------------------------------------------------
 rem 3. Phone connected with USB debugging?
