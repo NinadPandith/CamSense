@@ -117,8 +117,8 @@ object ScanConfig {
     const val GLINT_MATCH_DISTANCE = 0.04f
     /** A confirmed spot's diameter may not vary more than this ratio (max/min). */
     const val GLINT_MAX_SIZE_RATIO = 2.5f
-    /** Mean frame brightness above this shows "too bright". */
-    const val LENS_TOO_BRIGHT_LUMA = 110.0
+    /** Mean frame brightness above this shows "too bright" (the torch alone lights close walls). */
+    const val LENS_TOO_BRIGHT_LUMA = 140.0
     /** Run the object detector on every Nth lens-check frame to link glints to objects. */
     const val LENS_OBJECT_EVERY_N_FRAMES = 6
     /** Glint confidence for a confirmed track; grows with how long it was tracked. */

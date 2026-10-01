@@ -58,8 +58,13 @@ class ScanViewModel(
 
     /** Step 2: Wi-Fi and Bluetooth start, and keep running through step 3. */
     fun startNetworkChecks() {
-        if (networkJob == null) networkJob = viewModelScope.launch { modules.network.start() }
-        if (bleJob == null) bleJob = viewModelScope.launch { modules.ble.start() }
+        // Also re-runs a check that was skipped for a missing permission, once the user allows it.
+        if (networkJob == null || modules.network.results.value.skipReason == SkipReason.NO_NEARBY_PERMISSION) {
+            networkJob = viewModelScope.launch { modules.network.start() }
+        }
+        if (bleJob == null || modules.ble.results.value.skipReason == SkipReason.NO_NEARBY_PERMISSION) {
+            bleJob = viewModelScope.launch { modules.ble.start() }
+        }
     }
 
     /** Without camera access, steps 3, 4a and 4b are skipped. */

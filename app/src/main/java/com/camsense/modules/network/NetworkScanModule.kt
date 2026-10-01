@@ -90,9 +90,14 @@ class NetworkScanModule(private val context: Context) : BaseModule(ModuleId.NETW
             }
         }
 
-        // Hosts with no open port may still be alive; check the router and a quick ping.
-        val alive = openPorts.keys.toMutableSet()
+        // Hosts with no open port may still be alive (phones, laptops): list them too.
+        val alive = ConcurrentHashMap.newKeySet<String>().apply { addAll(openPorts.keys) }
         info.gatewayIp?.let { alive += it }
+        coroutineScope {
+            for (ip in hosts) if (ip !in alive) launch {
+                semaphore.withPermit { if (PortProber.isReachable(ip)) alive += ip }
+            }
+        }
 
         coroutineScope {
             alive.map { ip ->

@@ -9,13 +9,13 @@ import com.camsense.data.db.RunStatus
 import com.camsense.data.db.ScanWithDetails
 import com.camsense.data.db.UserVerdict
 import com.camsense.scoring.RiskLevel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
 
 data class FindingUi(
     val id: String,
@@ -60,7 +60,10 @@ class ResultsViewModel(private val container: AppContainer, private val scanId: 
                 val details = container.repository.getScan(scanId) ?: return@launch onError()
                 container.evidenceStore.saveEvidence(details, container.appVersion)
                 onSaved()
-            } catch (e: IOException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Storage full shows up as IOException or SQLiteFullException.
                 Log.w("CamSense/Evidence", "Save failed", e)
                 onError()
             }

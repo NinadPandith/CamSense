@@ -27,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,9 +84,13 @@ fun ResultsScreen(
 
     BackHandler(onBack = onBack)
     val state = ui ?: return
+    var vibrated by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.scanId) {
-        // One short vibration when a High result opens.
-        if (!readOnly && state.level == RiskLevel.HIGH) vibrateOnce(context)
+        // One short vibration when a High result opens (not again on return from Evidence).
+        if (!readOnly && !vibrated && state.level == RiskLevel.HIGH) {
+            vibrated = true
+            vibrateOnce(context)
+        }
     }
 
     fun saveEvidence() = vm.saveEvidence(
