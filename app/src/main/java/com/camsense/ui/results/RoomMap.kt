@@ -31,6 +31,8 @@ import com.camsense.R
 import com.camsense.core.ModuleId
 import com.camsense.ui.theme.CamSenseColors
 import com.camsense.ui.theme.CamSenseType
+import com.camsense.core.sensors.PointingMath
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -80,10 +82,11 @@ fun RoomMap(points: List<MapPoint>, modifier: Modifier = Modifier) {
                 drawText(youLayout, topLeft = Offset(c.x - youLayout.size.width / 2, c.y + 10.dp.toPx()))
                 val aheadLayout = measurer.measure(ahead, CamSenseType.Caption.copy(color = CamSenseColors.TextMuted))
                 drawText(aheadLayout, topLeft = Offset(c.x - aheadLayout.size.width / 2, -6.dp.toPx()))
+                // Spots in nearly the same direction go on different rings so their numbers don't overlap.
+                val rings = ringIndexes(points)
                 for (p in points) {
                     val a = Math.toRadians(p.angle.toDouble())
-                    // Spots seen in the same direction are spread out a little so numbers don't overlap.
-                    val ring = r * (0.7f + 0.1f * ((p.number - 1) % 3 - 1))
+                    val ring = r * (0.85f - 0.25f * (rings[p.number] ?: 0))
                     val pos = Offset(c.x + (ring * sin(a)).toFloat(), c.y - (ring * cos(a)).toFloat())
                     val dot = 13.dp.toPx()
                     drawCircle(p.module.mapColor(), dot, pos)
@@ -103,3 +106,15 @@ fun RoomMap(points: List<MapPoint>, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Ring 0 (outer), 1 or 2 for each point number, so points within [MAP_CLOSE_DEG] of each other differ. */
+internal fun ringIndexes(points: List<MapPoint>): Map<Int, Int> {
+    val placed = mutableListOf<Pair<MapPoint, Int>>()
+    for (p in points) {
+        val taken = placed.filter { (q, _) -> abs(PointingMath.angleDiff(p.angle, q.angle)) < MAP_CLOSE_DEG }.map { it.second }.toSet()
+        placed += p to ((0..2).firstOrNull { it !in taken } ?: (taken.size % 3))
+    }
+    return placed.associate { (p, ring) -> p.number to ring }
+}
+
+private const val MAP_CLOSE_DEG = 25f
