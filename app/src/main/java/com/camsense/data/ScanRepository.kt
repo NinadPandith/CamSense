@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.room.withTransaction
 import com.camsense.core.ModuleId
 import com.camsense.core.ModuleResult
+import com.camsense.core.ScanMode
 import com.camsense.data.db.BleDeviceEntity
 import com.camsense.data.db.CamSenseDatabase
 import com.camsense.data.db.NetworkDeviceEntity
@@ -30,8 +31,9 @@ class ScanRepository(
     suspend fun getScan(scanId: String): ScanWithDetails? = dao.getScanWithDetails(scanId)
 
     /** Step 1: creates the scan row with status RUNNING. */
-    suspend fun createScan(placeName: String?): ScanEntity {
+    suspend fun createScan(placeName: String?, mode: ScanMode = ScanMode.FULL): ScanEntity {
         val scan = ScanEntity(
+            mode = mode,
             placeName = placeName?.trim()?.takeIf { it.isNotEmpty() },
             startedAt = System.currentTimeMillis(),
             deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}",
@@ -48,13 +50,15 @@ class ScanRepository(
         assessment: RiskAssessment,
         networkDevices: List<NetworkDevice>,
         bleDevices: List<BleDevice>,
+        coverage: Float? = null,
+        startYaw: Float? = null,
     ) = db.withTransaction {
         val scan = dao.getScan(scanId) ?: return@withTransaction
         val netEntities = networkDevices.map {
             NetworkDeviceEntity(id = it.id, scanId = scanId, ip = it.ip, hostname = it.hostname,
                 mdnsName = it.mdnsName,
-                // ONVIF replies share the ssdp_server column (no schema change).
-                ssdpServer = listOfNotNull(it.onvif, it.ssdpServer).joinToString(" | ").ifEmpty { null },
+                // ONVIF replies share the ssdp_server column.
+                ssdpServer = it.serverText,
                 openPorts = it.openPorts,
                 banner = it.banner, isSelf = it.isSelf, isGateway = it.isGateway,
                 suspicionScore = it.suspicionScore)
@@ -71,7 +75,16 @@ class ScanRepository(
             finishedAt = System.currentTimeMillis(),
             riskScore = assessment.score,
             riskLevel = assessment.level,
+            coverage = coverage,
+            startYaw = startYaw,
         ))
+    }
+
+    /** The previous completed scan of the same place, with its devices, if there is one. */
+    suspend fun previousScan(scan: ScanEntity): ScanWithDetails? {
+        val place = scan.placeName?.takeIf { it.isNotBlank() } ?: return null
+        val prev = dao.previousScanOf(place, scan.startedAt) ?: return null
+        return dao.getScanWithDetails(prev.id)
     }
 
     private suspend fun insertResults(scanId: String, results: List<ModuleResult>, deviceIdByIp: Map<String, String>) {

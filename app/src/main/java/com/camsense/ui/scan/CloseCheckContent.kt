@@ -2,7 +2,6 @@ package com.camsense.ui.scan
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AcUnit
 import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,11 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.camsense.R
 import com.camsense.core.Spot
+import com.camsense.modules.magnetometer.HotCold
 import com.camsense.modules.magnetometer.MagnetSweepModule
 import com.camsense.ui.components.TextAction
 import com.camsense.ui.components.icon
@@ -41,11 +46,13 @@ import com.camsense.ui.theme.CamSenseType
 @Composable
 fun ColumnScope.CloseCheckContent(
     live: MagnetSweepModule.Live,
+    hotCold: HotCold.State,
     spots: List<Spot>,
     onSelect: (String?) -> Unit,
     onReset: () -> Unit,
 ) {
     Meter(live)
+    if (!live.calibrating) HotColdLine(hotCold)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         TextAction(stringResource(R.string.close_reset), onReset)
     }
@@ -71,6 +78,22 @@ fun ColumnScope.CloseCheckContent(
                 }
             }
         }
+    }
+}
+
+/** "Getting warmer", "Getting colder", or "You passed the strongest point, go back a little". */
+@Composable
+private fun HotColdLine(s: HotCold.State) {
+    val (icon, text, color) = when {
+        s.passedPeak -> Triple(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.hotcold_passed), CamSenseColors.MediumText)
+        s.trend == HotCold.Trend.WARMER -> Triple(Icons.Rounded.LocalFireDepartment, stringResource(R.string.hotcold_warmer), CamSenseColors.Primary)
+        s.trend == HotCold.Trend.COLDER -> Triple(Icons.Rounded.AcUnit, stringResource(R.string.hotcold_colder), CamSenseColors.TextMuted)
+        else -> Triple(Icons.Rounded.Explore, stringResource(R.string.hotcold_move), CamSenseColors.TextMuted)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+        Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
+        Text(text, style = CamSenseType.Body, color = color)
     }
 }
 

@@ -20,7 +20,7 @@ import java.security.MessageDigest
  * sheet can show them; they only become evidence items (with SHA-256 hashes)
  * when the user taps "Save evidence".
  */
-class EvidenceStore(context: Context, private val evidenceDao: EvidenceDao) {
+class EvidenceStore(private val context: Context, private val evidenceDao: EvidenceDao) {
 
     private val root = File(context.filesDir, "evidence")
     private val json = Json { prettyPrint = true; encodeDefaults = true }
@@ -30,6 +30,9 @@ class EvidenceStore(context: Context, private val evidenceDao: EvidenceDao) {
     fun snapshotFile(scanId: String, findingId: String): File = File(scanDir(scanId), "$findingId.jpg")
 
     fun file(relativePath: String): File = File(root, relativePath)
+
+    /** The PDF report, written by saveEvidence. */
+    fun pdfFile(scanId: String): File = File(scanDir(scanId), "report.pdf")
 
     suspend fun saveSnapshot(scanId: String, findingId: String, bitmap: Bitmap) = withContext(Dispatchers.IO) {
         try {
@@ -88,9 +91,16 @@ class EvidenceStore(context: Context, private val evidenceDao: EvidenceDao) {
             val reportItem = EvidenceItemEntity(scanId = scanId, type = EvidenceType.REPORT_JSON,
                 filePath = "$scanId/report.json", sha256 = sha256(reportFile), createdAt = now)
 
+            // PDF report: photos with the spot circled, every finding, and the photo hashes.
+            val pdf = pdfFile(scanId)
+            com.camsense.data.report.PdfReportWriter(context)
+                .write(details, photos.map { file(it.filePath) to it.sha256 }, pdf)
+            val pdfItem = EvidenceItemEntity(scanId = scanId, type = EvidenceType.REPORT_PDF,
+                filePath = "$scanId/report.pdf", sha256 = sha256(pdf), createdAt = now)
+
             // Saving twice replaces the earlier record instead of duplicating it.
             evidenceDao.deleteForScan(scanId)
-            val items = photos + reportItem
+            val items = photos + reportItem + pdfItem
             evidenceDao.insert(items)
             items
         }

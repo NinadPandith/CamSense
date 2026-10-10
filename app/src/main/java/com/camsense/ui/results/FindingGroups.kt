@@ -19,6 +19,9 @@ object FindingGroups {
                 verdict = verdicts.singleOrNull() ?: UserVerdict.UNREVIEWED,
                 snapshot = best.snapshot ?: items.firstNotNullOfOrNull { it.snapshot },
                 technical = items.mapNotNull { it.technical }.distinct().joinToString("\n\n").ifEmpty { null },
+                yaw = best.yaw ?: items.firstNotNullOfOrNull { it.yaw },
+                pitch = best.pitch ?: items.firstNotNullOfOrNull { it.pitch },
+                signatures = items.flatMap { it.signatures }.distinct(),
             )
         }.sortedByDescending { it.confidence }
 }

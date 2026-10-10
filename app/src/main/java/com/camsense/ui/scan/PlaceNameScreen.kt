@@ -16,6 +16,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.camsense.R
+import com.camsense.core.ScanMode
+import com.camsense.ui.components.NoticeBanner
 import com.camsense.ui.components.PrimaryButton
 import com.camsense.ui.components.ScanStepScreen
 import com.camsense.ui.theme.CamSenseColors
@@ -33,6 +35,11 @@ fun PlaceNameScreen(vm: ScanViewModel, onNext: () -> Unit, onBack: () -> Unit) {
         onStop = onBack,
         bottom = { PrimaryButton(stringResource(R.string.action_next), { vm.startScan(name, onNext) }) },
     ) {
+        when (vm.mode) {
+            ScanMode.QUICK -> NoticeBanner(stringResource(R.string.mode_quick_about))
+            ScanMode.SMALL_ROOM -> NoticeBanner(stringResource(R.string.mode_small_room_about))
+            ScanMode.FULL -> Unit
+        }
         OutlinedTextField(
             value = name,
             onValueChange = { name = it.take(120) },

@@ -233,6 +233,38 @@ object ScanConfig {
     const val MOTION_TOO_FAST = 18.0
     const val MOTION_FRAME_SIZE = 64
 
+    // ---- Room coverage meter and room map ----
+    /** Compass sectors around the user (12 × 30°), each in 3 bands: low, middle, high. */
+    const val COVERAGE_SECTORS = 12
+    /** Orientation readings (~50 a second) needed in a cell before it counts: a flick past doesn't. */
+    const val COVERAGE_SAMPLES = 10
+    /** Below this up/down angle is the "low" band (floor, under furniture); above HIGH is the ceiling band. */
+    const val COVERAGE_LOW_PITCH = -25f
+    const val COVERAGE_HIGH_PITCH = 25f
+    /** Below this share covered, the camera steps show what's still missing. */
+    const val COVERAGE_GOOD = 0.6f
+    /** Camera field of view in portrait (degrees), to place a spot in the frame on the room map. */
+    const val CAMERA_HFOV_DEG = 50f
+    const val CAMERA_VFOV_DEG = 65f
+
+    // ---- Hot–cold finder (close check) ----
+    const val HOTCOLD_FAST_ALPHA = 0.4f
+    const val HOTCOLD_SLOW_ALPHA = 0.05f
+    /** Fast minus slow average (µT) that counts as getting warmer or colder. */
+    const val HOTCOLD_TREND_UT = 1.5f
+    /** Field fallen this share below the recent peak: "you passed the strongest point". */
+    const val HOTCOLD_PASSED_DROP = 0.35f
+    const val HOTCOLD_PEAK_WINDOW_MS = 3_000L
+    const val HOTCOLD_MIN_PEAK_UT = 10f
+
+    // ---- Bathroom / changing-room mirror check ----
+    /** "No gap" in the fingertip test: a hiding-spot finding at this confidence. */
+    const val MIRROR_NO_GAP_CONFIDENCE = 0.6f
+
+    // ---- Voice guidance ----
+    /** The same sentence isn't spoken again within this time. */
+    const val VOICE_REPEAT_MS = 6_000L
+
     // ---- M6 AI objects ----
     const val MODEL_ASSET = "models/hiding_objects_yolo26n.tflite"
     const val LABELS_ASSET = "models/labels.txt"

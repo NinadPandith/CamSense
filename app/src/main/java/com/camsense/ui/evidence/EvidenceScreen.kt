@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.camsense.R
@@ -28,6 +29,8 @@ import com.camsense.data.db.EvidenceType
 import com.camsense.ui.appContainer
 import com.camsense.ui.components.CamSenseScreen
 import com.camsense.ui.components.PrimaryButton
+import com.camsense.ui.components.SecondaryButton
+import com.camsense.ui.components.shareFile
 import com.camsense.ui.components.formatTime
 import com.camsense.ui.theme.CamSenseColors
 import com.camsense.ui.theme.CamSenseType
@@ -38,13 +41,26 @@ import java.io.File
 /** Saved photos and report for a scan, with the time, place and SHA-256 of each file. */
 @Composable
 fun EvidenceScreen(scanId: String, onBack: () -> Unit) {
+    val context = LocalContext.current
     val container = appContainer()
+    val pdf = remember(scanId) { container.evidenceStore.pdfFile(scanId) }
     val details by remember(scanId) { container.repository.observeScan(scanId) }.collectAsState(initial = null)
 
     CamSenseScreen(
         title = stringResource(R.string.evidence_title),
         onBack = onBack,
-        bottom = { PrimaryButton(stringResource(R.string.evidence_back), onBack) },
+        bottom = {
+            val d = details
+            val hasPdf = d?.evidenceItems?.any { it.type == EvidenceType.REPORT_PDF } == true && pdf.exists()
+            if (hasPdf) {
+                val text = stringResource(R.string.share_report_text, d?.scan?.placeName ?: stringResource(R.string.history_unnamed))
+                val title = stringResource(R.string.share_report_title)
+                PrimaryButton(stringResource(R.string.evidence_share), { shareFile(context, pdf, "application/pdf", text, title) })
+                SecondaryButton(stringResource(R.string.evidence_back), onBack)
+            } else {
+                PrimaryButton(stringResource(R.string.evidence_back), onBack)
+            }
+        },
     ) {
         val d = details ?: return@CamSenseScreen
         Label(stringResource(R.string.evidence_place))
@@ -56,7 +72,7 @@ fun EvidenceScreen(scanId: String, onBack: () -> Unit) {
         if (d.evidenceItems.isEmpty()) {
             Text(stringResource(R.string.evidence_none), style = CamSenseType.Body, color = CamSenseColors.TextMuted)
         }
-        d.evidenceItems.sortedBy { if (it.type == EvidenceType.PHOTO) 0 else 1 }.forEach { item ->
+        d.evidenceItems.sortedBy { it.type.ordinal }.forEach { item ->
             EvidenceCard(item, container.evidenceStore.file(item.filePath))
         }
     }
@@ -81,7 +97,7 @@ private fun EvidenceCard(item: EvidenceItemEntity, file: File) {
                 modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(RoundedCornerShape(12.dp)))
         }
         if (item.type != EvidenceType.PHOTO) {
-            Text(stringResource(R.string.evidence_report), style = CamSenseType.Heading, color = CamSenseColors.Text)
+            Text(stringResource(if (item.type == EvidenceType.REPORT_PDF) R.string.evidence_report_pdf else R.string.evidence_report), style = CamSenseType.Heading, color = CamSenseColors.Text)
         }
         Text(file.name, style = CamSenseType.Data, color = CamSenseColors.Text)
         Label(stringResource(R.string.evidence_hash))

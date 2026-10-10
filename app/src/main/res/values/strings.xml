@@ -240,4 +240,100 @@
     <string name="about_objects">Hiding-spot check: points out objects where cameras are often hidden.</string>
     <string name="about_limits_title">What no phone can catch</string>
     <string name="about_limits">Wired cameras without night vision that record to a memory card give off no Wi-Fi, Bluetooth or infrared signal. Look closely at the spots CamSense marks, and treat a Low result as no clear signs, not a guarantee.</string>
+
+    <!-- Scan modes -->
+    <string name="home_quick">Quick check-in</string>
+    <string name="home_small_room">Bathroom or changing room</string>
+    <string name="mode_full">Full scan</string>
+    <string name="mode_quick">Quick check-in</string>
+    <string name="mode_small_room">Bathroom or changing room</string>
+    <string name="mode_quick_about">Quick check-in runs the Wi-Fi, Bluetooth and lens checks. It takes about a minute.</string>
+    <string name="mode_small_room_about">For small rooms. Adds a mirror test and leaves out the room sweep.</string>
+    <string name="skip_not_in_this_scan">Not part of a quick check-in. Do a full scan to include it.</string>
+    <string name="results_quick_note">This was a quick check-in. A full scan also checks for infrared light and hidden electronics.</string>
+    <string name="results_full_scan">Do a full scan</string>
+
+    <!-- Mirror check -->
+    <string name="mirror_title">Mirror check</string>
+    <string name="mirror_instruction">Touch the mirror with a fingertip and look closely at the gap between your finger and its reflection.</string>
+    <string name="mirror_gap">I see a gap</string>
+    <string name="mirror_no_gap">No gap, they touch</string>
+    <string name="mirror_none">There\'s no mirror here</string>
+    <string name="mirror_how_gap">A gap means normal glass with the mirror coating behind it.</string>
+    <string name="mirror_how_no_gap">If your fingertip touches its reflection, the coating is on the front. That can be a two-way mirror.</string>
+    <string name="mirror_tip">Also knock on it. A two-way mirror usually sounds hollow, not flat and solid.</string>
+
+    <!-- Room coverage -->
+    <string name="coverage_percent">%1$d%% checked</string>
+    <string name="coverage_gap_ahead">Point the phone back the way you started</string>
+    <string name="coverage_gap_right">Turn to your right, that part isn\'t checked yet</string>
+    <string name="coverage_gap_behind">Turn around, the wall behind you isn\'t checked yet</string>
+    <string name="coverage_gap_left">Turn to your left, that part isn\'t checked yet</string>
+    <string name="coverage_gap_ceiling">Point the phone up at the ceiling corners</string>
+    <string name="coverage_gap_floor">Point the phone down at low shelves and sockets</string>
+    <string name="results_coverage">Room covered: %1$d%%</string>
+
+    <!-- Room map -->
+    <string name="map_title">Where in the room</string>
+    <string name="map_you">You</string>
+    <string name="map_description">Room map with %1$d marked spots around where you stood</string>
+    <string name="dir_ahead">Ahead</string>
+    <string name="dir_ahead_right">Ahead, to the right</string>
+    <string name="dir_right">To your right</string>
+    <string name="dir_behind_right">Behind, to the right</string>
+    <string name="dir_behind">Behind you</string>
+    <string name="dir_behind_left">Behind, to the left</string>
+    <string name="dir_left">To your left</string>
+    <string name="dir_ahead_left">Ahead, to the left</string>
+
+    <!-- Compare with last scan -->
+    <string name="since_title">Since your scan on %1$s</string>
+    <string name="since_nothing_new">No new devices since last time.</string>
+    <plurals name="since_new_wifi">
+        <item quantity="one">%1$d new device on the Wi-Fi</item>
+        <item quantity="other">%1$d new devices on the Wi-Fi</item>
+    </plurals>
+    <plurals name="since_new_hotspots">
+        <item quantity="one">%1$d new camera hotspot nearby</item>
+        <item quantity="other">%1$d new camera hotspots nearby</item>
+    </plurals>
+    <plurals name="since_new_bluetooth">
+        <item quantity="one">%1$d new Bluetooth device</item>
+        <item quantity="other">%1$d new Bluetooth devices</item>
+    </plurals>
+
+    <!-- Sharing and PDF report -->
+    <string name="results_send_trusted">Send to someone I trust</string>
+    <string name="evidence_share">Share report</string>
+    <string name="evidence_report_pdf">PDF report</string>
+    <string name="share_report_title">Share report</string>
+    <string name="share_report_text">CamSense scan report for %1$s</string>
+    <string name="pdf_title">CamSense scan report</string>
+    <string name="pdf_phone">Phone</string>
+    <string name="pdf_scan_type">Scan type</string>
+    <string name="pdf_result">Result</string>
+    <string name="pdf_devices">Devices found</string>
+    <string name="pdf_photos">Photos</string>
+    <string name="pdf_about">About this report</string>
+    <string name="pdf_integrity">Each photo has a SHA-256 hash, taken when the evidence was saved. If a file is changed, its hash no longer matches. CamSense finds signs of hidden cameras; it can\'t prove there is or isn\'t one.</string>
+    <string name="pdf_footer">Made on this phone by CamSense · page %1$d</string>
+
+    <!-- Voice and hot-cold -->
+    <string name="settings_voice">Spoken guidance</string>
+    <string name="settings_voice_about">Reads each step and alert out loud, so you can keep your eyes on the room. Works offline.</string>
+    <string name="voice_check_this">Check this</string>
+    <string name="hotcold_move">Move the phone slowly along the spot</string>
+    <string name="hotcold_warmer">Warmer, the field is getting stronger</string>
+    <string name="hotcold_colder">Colder, the field is getting weaker</string>
+    <string name="hotcold_passed">You passed the strongest point. Go back a little.</string>
+
+    <!-- Remembered safe devices -->
+    <string name="settings_forget_safe">Forget devices marked safe</string>
+    <plurals name="settings_safe_count">
+        <item quantity="one">%1$d device is skipped in scans</item>
+        <item quantity="other">%1$d devices are skipped in scans</item>
+    </plurals>
+    <string name="settings_forget_safe_title">Forget devices marked safe?</string>
+    <string name="settings_forget_safe_body">Scans will flag them again until you mark them as checked.</string>
+    <string name="action_forget">Forget</string>
 </resources>

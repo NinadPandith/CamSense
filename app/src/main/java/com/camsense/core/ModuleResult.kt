@@ -32,6 +32,9 @@ data class Finding(
     /** Stable id; a glint snapshot is saved as evidence/<scanId>/<id>.jpg. */
     val id: String = UUID.randomUUID().toString(),
     val createdAt: Long = System.currentTimeMillis(),
+    /** Compass heading and up/down angle (degrees) of the spot; set when the scan is saved. */
+    val yaw: Float? = null,
+    val pitch: Float? = null,
 )
 
 /** Why a module didn't run. Stored as text in module_runs.skip_reason. */
@@ -44,5 +47,7 @@ enum class SkipReason {
     NO_MAGNETOMETER,
     MODEL_NOT_LOADED,
     NOT_REACHED,
+    /** The check isn't part of the chosen scan (quick check-in, small room). */
+    NOT_IN_THIS_SCAN,
     MODULE_FAILED,
 }

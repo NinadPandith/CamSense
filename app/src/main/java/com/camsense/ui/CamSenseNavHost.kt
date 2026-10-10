@@ -31,6 +31,10 @@ import com.camsense.ui.scan.PlaceNameScreen
 import com.camsense.ui.scan.RecheckScreen
 import com.camsense.ui.scan.RoomSweepScreen
 import com.camsense.ui.scan.ScanViewModel
+import com.camsense.ui.scan.ScanStep
+import com.camsense.ui.scan.MirrorCheckScreen
+import com.camsense.core.ScanMode
+import kotlinx.coroutines.CoroutineScope
 import com.camsense.ui.settings.AboutScreen
 import com.camsense.ui.settings.SettingsScreen
 import com.camsense.ui.splash.SplashScreen
@@ -90,7 +94,7 @@ fun CamSenseNavHost() {
         }
         composable(Routes.HOME) {
             HomeScreen(
-                onStartScan = { nav.navigate(Routes.scan()) },
+                onStartScan = { mode -> nav.navigate(Routes.scan(mode = mode)) },
                 onHistory = { nav.navigate(Routes.HISTORY) },
                 onSettings = { nav.navigate(Routes.SETTINGS) },
                 onOpenScan = { id -> nav.navigate(Routes.results(id, readOnly = true)) },
@@ -100,45 +104,60 @@ fun CamSenseNavHost() {
         navigation(
             startDestination = Routes.PLACE_NAME,
             route = Routes.SCAN_GRAPH,
-            arguments = listOf(navArgument("place") { type = NavType.StringType; defaultValue = "" }),
+            arguments = listOf(
+                navArgument("place") { type = NavType.StringType; defaultValue = "" },
+                navArgument("mode") { type = NavType.StringType; defaultValue = ScanMode.FULL.name },
+            ),
         ) {
             composable(Routes.PLACE_NAME) { entry ->
                 val vm = scanViewModel(nav, entry)
+                val scope = rememberCoroutineScope()
                 PlaceNameScreen(vm,
-                    onNext = { nav.navigate(Routes.NETWORK_CHECK) },
+                    onNext = { goToStep(nav, scope, vm, ScanStep.PLACE) },
                     onBack = { nav.popBackStack(Routes.HOME, inclusive = false) })
             }
             composable(Routes.NETWORK_CHECK) { entry ->
                 val vm = scanViewModel(nav, entry)
+                val scope = rememberCoroutineScope()
                 NetworkCheckScreen(vm,
-                    onContinue = { nav.navigate(Routes.ROOM_SWEEP) },
+                    onContinue = { goToStep(nav, scope, vm, ScanStep.NETWORK) },
                     onAllowNearby = { nav.navigate(Routes.permissions(Routes.RETURN_BACK)) },
                     onStopped = { goHome(nav) })
             }
             composable(Routes.ROOM_SWEEP) { entry ->
                 val vm = scanViewModel(nav, entry)
+                val scope = rememberCoroutineScope()
                 RoomSweepScreen(vm,
-                    onNext = { showIr -> nav.navigate(if (showIr) Routes.IR_CHECK else Routes.LENS_CHECK) },
-                    onCameraSkipped = { nav.navigate(Routes.CLOSE_CHECK) },
+                    onNext = { goToStep(nav, scope, vm, ScanStep.ROOM) },
+                    onSkipCamera = { goToStep(nav, scope, vm, ScanStep.ROOM) },
                     onStopped = { goHome(nav) })
+            }
+            composable(Routes.MIRROR_CHECK) { entry ->
+                val vm = scanViewModel(nav, entry)
+                val scope = rememberCoroutineScope()
+                MirrorCheckScreen(vm, onNext = { goToStep(nav, scope, vm, ScanStep.MIRROR) }, onStopped = { goHome(nav) })
             }
             composable(Routes.IR_CHECK) { entry ->
                 val vm = scanViewModel(nav, entry)
-                IrCheckScreen(vm, onNext = { nav.navigate(Routes.LENS_CHECK) }, onStopped = { goHome(nav) })
+                val scope = rememberCoroutineScope()
+                IrCheckScreen(vm,
+                    onNext = { goToStep(nav, scope, vm, ScanStep.IR) },
+                    onSkipCamera = { goToStep(nav, scope, vm, ScanStep.IR) },
+                    onStopped = { goHome(nav) })
             }
             composable(Routes.LENS_CHECK) { entry ->
                 val vm = scanViewModel(nav, entry)
-                LensCheckScreen(vm, onNext = { nav.navigate(Routes.CLOSE_CHECK) }, onStopped = { goHome(nav) })
+                val scope = rememberCoroutineScope()
+                LensCheckScreen(vm,
+                    onNext = { goToStep(nav, scope, vm, ScanStep.LENS) },
+                    onSkipCamera = { goToStep(nav, scope, vm, ScanStep.LENS) },
+                    onStopped = { goHome(nav) })
             }
             composable(Routes.CLOSE_CHECK) { entry ->
                 val vm = scanViewModel(nav, entry)
+                val scope = rememberCoroutineScope()
                 CloseCheckScreen(vm,
-                    onResults = { id ->
-                        // Pop the whole scan graph so Back on Results goes Home, never into the scan.
-                        nav.navigate(Routes.results(id, readOnly = false)) {
-                            popUpTo(Routes.SCAN_GRAPH) { inclusive = true }
-                        }
-                    },
+                    onResults = { goToStep(nav, scope, vm, ScanStep.CLOSE) },
                     onStopped = { goHome(nav) })
             }
         }
@@ -157,7 +176,7 @@ fun CamSenseNavHost() {
                 readOnly = readOnly,
                 onHome = { goHome(nav) },
                 onBack = { if (readOnly) nav.popBackStack() else goHome(nav) },
-                onScanAgain = { place -> nav.navigate(Routes.scan(place)) { popUpTo(Routes.HOME) } },
+                onScanAgain = { place, mode -> nav.navigate(Routes.scan(place, mode)) { popUpTo(Routes.HOME) } },
                 onCheckSpots = { nav.navigate(Routes.recheck(scanId)) },
                 onEvidence = { nav.navigate(Routes.evidence(scanId)) },
                 onGetHelp = { nav.navigate(Routes.GET_HELP) },
@@ -194,6 +213,28 @@ fun CamSenseNavHost() {
             )
         }
         composable(Routes.ABOUT) { AboutScreen(onBack = { nav.popBackStack() }) }
+    }
+}
+
+/**
+ * Moves the scan on from [from]: the view model decides the next step for this scan
+ * type (skipping IR on phones that can't see it, camera steps without the camera).
+ * Results pops the whole scan graph, so Back on Results goes Home, never into the scan.
+ */
+private fun goToStep(nav: NavController, scope: CoroutineScope, vm: ScanViewModel, from: ScanStep) {
+    scope.launch {
+        when (val step = vm.next(from)) {
+            ScanStep.RESULTS -> vm.finish { id ->
+                nav.navigate(Routes.results(id, readOnly = false)) { popUpTo(Routes.SCAN_GRAPH) { inclusive = true } }
+            }
+            ScanStep.NETWORK -> nav.navigate(Routes.NETWORK_CHECK)
+            ScanStep.ROOM -> nav.navigate(Routes.ROOM_SWEEP)
+            ScanStep.MIRROR -> nav.navigate(Routes.MIRROR_CHECK)
+            ScanStep.IR -> nav.navigate(Routes.IR_CHECK)
+            ScanStep.LENS -> nav.navigate(Routes.LENS_CHECK)
+            ScanStep.CLOSE -> nav.navigate(Routes.CLOSE_CHECK)
+            ScanStep.PLACE -> Unit
+        }
     }
 }
 

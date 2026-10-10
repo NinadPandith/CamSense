@@ -93,5 +93,6 @@ fun skipReasonText(reason: String?): Int = when (reason?.let { r -> SkipReason.e
     SkipReason.NO_MAGNETOMETER -> R.string.skip_no_magnetometer
     SkipReason.MODEL_NOT_LOADED -> R.string.skip_model
     SkipReason.NOT_REACHED -> R.string.skip_not_reached
+    SkipReason.NOT_IN_THIS_SCAN -> R.string.skip_not_in_this_scan
     SkipReason.MODULE_FAILED, null -> R.string.skip_failed
 }

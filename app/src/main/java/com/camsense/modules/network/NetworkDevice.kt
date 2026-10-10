@@ -15,4 +15,7 @@ data class NetworkDevice(
     val suspicionScore: Float = 0f,
     val reason: String? = null,
     val id: String = java.util.UUID.randomUUID().toString(),
-)
+) {
+    /** ONVIF and SSDP names as saved in network_devices.ssdp_server. */
+    val serverText: String? get() = listOfNotNull(onvif, ssdpServer).joinToString(" | ").ifEmpty { null }
+}

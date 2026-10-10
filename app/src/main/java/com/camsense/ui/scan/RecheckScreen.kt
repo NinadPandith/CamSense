@@ -21,6 +21,7 @@ fun RecheckScreen(scanId: String, onResults: () -> Unit, onBack: () -> Unit) {
     val vm: RecheckViewModel = viewModel(factory = viewModelFactory { initializer { RecheckViewModel(container, scanId) } })
     KeepScreenOn()
     val live by vm.magnet.live.collectAsState()
+    val hotCold by vm.hotCold.collectAsState()
     val spots by vm.spots.collectAsState()
 
     CamSenseScreen(
@@ -32,7 +33,7 @@ fun RecheckScreen(scanId: String, onResults: () -> Unit, onBack: () -> Unit) {
             NoticeBanner(stringResource(R.string.close_no_magnetometer))
         } else {
             NoticeBanner(stringResource(R.string.close_instruction))
-            CloseCheckContent(live, spots, vm::selectSpot, vm.magnet::recalibrate)
+            CloseCheckContent(live, hotCold, spots, vm::selectSpot, vm.magnet::recalibrate)
         }
     }
 }

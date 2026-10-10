@@ -19,7 +19,9 @@ import com.camsense.scoring.ScanConfig
 import com.camsense.ui.components.CameraPreview
 import com.camsense.ui.components.CameraStepScreen
 import com.camsense.ui.components.NoticeBanner
+import com.camsense.ui.components.SpeakOnEnter
 import com.camsense.ui.components.TextAction
+import com.camsense.util.PositionWords
 
 /**
  * Step 4b: torch + rear camera; confirmed glints get red circles and a snapshot.
@@ -27,56 +29,67 @@ import com.camsense.ui.components.TextAction
  * detector shares that object's target_key. The torch turns off on leaving.
  */
 @Composable
-fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onStopped: () -> Unit) {
+fun LensCheckScreen(vm: ScanViewModel, onNext: () -> Unit, onSkipCamera: () -> Unit, onStopped: () -> Unit) {
     val context = LocalContext.current
     val askStop = scanStepGuard(vm, onStopped)
-    LaunchedEffect(Unit) { vm.startLensStep() }
-    val glint by vm.modules.glint.overlay.collectAsState()
-    val objects by vm.modules.objects.overlay.collectAsState()
-    var acceptedBright by remember { mutableStateOf(false) }
-    val stats by vm.modules.glint.stats.collectAsState()
-    val flashTesting by vm.modules.glint.flashTesting.collectAsState()
-    val overlay = if (objects.frameWidth == glint.frameWidth && objects.frameHeight == glint.frameHeight)
-        glint.copy(marks = objects.marks + glint.marks) else glint
+    val title = stringResource(R.string.lens_title)
+    val instruction = stringResource(R.string.lens_instruction)
+    CameraGate(vm, ScanSteps.dotNumber(ScanStep.LENS), title, instruction, frontCamera = false, askStop, onSkipCamera) {
+        SpeakOnEnter(title, instruction)
+        LaunchedEffect(Unit) { vm.startLensStep() }
+        val glint by vm.modules.glint.overlay.collectAsState()
+        val objects by vm.modules.objects.overlay.collectAsState()
+        val stats by vm.modules.glint.stats.collectAsState()
+        val flashTesting by vm.modules.glint.flashTesting.collectAsState()
+        var acceptedBright by remember { mutableStateOf(false) }
+        val overlay = if (objects.frameWidth == glint.frameWidth && objects.frameHeight == glint.frameHeight)
+            glint.copy(marks = objects.marks + glint.marks) else glint
 
-    CameraStepScreen(
-        step = 4,
-        instruction = stringResource(R.string.lens_instruction),
-        overlay = overlay,
-        mirror = false,
-        dim = true,
-        onStop = askStop,
-        preview = {
-            CameraPreview(
-                CameraSelector.LENS_FACING_BACK, vm.modules.glint.analyzer, Modifier.fillMaxSize(),
-                torch = true,
-                exposureBias = ScanConfig.LENS_EXPOSURE_BIAS,
-                onCamera = vm.modules.glint::attachCamera,
-            )
-        },
-        banner = {
-            if (flashTesting) {
-                NoticeBanner(stringResource(R.string.lens_flash_checking))
-            } else if (glint.tooBright && !acceptedBright) {
-                NoticeBanner(stringResource(R.string.banner_too_bright),
-                    actionText = stringResource(R.string.banner_continue_anyway),
-                    onAction = { acceptedBright = true; vm.modules.glint.brightRoomAccepted = true })
-            } else if (glint.tooFast) {
-                NoticeBanner(stringResource(R.string.banner_too_fast))
-            }
-        },
-        bottom = {
-            if (overlay.marks.any { it.kind == CameraOverlay.Kind.GLINT }) {
-                TextAction(stringResource(R.string.lens_take_photo), {
-                    vm.modules.glint.requestSnapshot()
-                    Toast.makeText(context, R.string.lens_photo_saved, Toast.LENGTH_SHORT).show()
-                })
-            }
-            TimedStepButton(stringResource(R.string.lens_button), ScanConfig.LENS_STEP_MIN_MS) {
-                vm.endLensStep()
-                onNext()
-            }
-        },
-        debugLine = stats.line(),
-    )
+        val lens = glint.marks.firstOrNull()?.let { stringResource(R.string.overlay_glint_found, PositionWords.of(it.x, it.y)) }
+        LaunchedEffect(lens != null) { lens?.let { vm.voice.say(it) } }
+        val checking = stringResource(R.string.lens_flash_checking)
+        LaunchedEffect(flashTesting) { if (flashTesting) vm.voice.say(checking) }
+
+        CameraStepScreen(
+            step = ScanSteps.dotNumber(ScanStep.LENS),
+            instruction = instruction,
+            overlay = overlay,
+            mirror = false,
+            dim = true,
+            onStop = askStop,
+            preview = {
+                CameraPreview(
+                    CameraSelector.LENS_FACING_BACK, vm.modules.glint.analyzer, Modifier.fillMaxSize(),
+                    torch = true,
+                    exposureBias = ScanConfig.LENS_EXPOSURE_BIAS,
+                    onCamera = vm.modules.glint::attachCamera,
+                )
+            },
+            banner = {
+                if (flashTesting) {
+                    NoticeBanner(checking)
+                } else if (glint.tooBright && !acceptedBright) {
+                    NoticeBanner(stringResource(R.string.banner_too_bright),
+                        actionText = stringResource(R.string.banner_continue_anyway),
+                        onAction = { acceptedBright = true; vm.modules.glint.brightRoomAccepted = true })
+                } else if (glint.tooFast) {
+                    NoticeBanner(stringResource(R.string.banner_too_fast))
+                }
+            },
+            bottom = {
+                if (overlay.marks.any { it.kind == CameraOverlay.Kind.GLINT }) {
+                    TextAction(stringResource(R.string.lens_take_photo), {
+                        vm.modules.glint.requestSnapshot()
+                        Toast.makeText(context, R.string.lens_photo_saved, Toast.LENGTH_SHORT).show()
+                    })
+                }
+                TimedStepButton(stringResource(R.string.lens_button), ScanConfig.LENS_STEP_MIN_MS) {
+                    vm.endLensStep()
+                    onNext()
+                }
+            },
+            debugLine = stats.line(),
+            coverage = coverageSlot(vm),
+        )
+    }
 }

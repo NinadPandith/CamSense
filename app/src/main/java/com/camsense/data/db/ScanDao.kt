@@ -33,6 +33,10 @@ interface ScanDao {
     @Query("SELECT * FROM scans WHERE id = :scanId")
     suspend fun getScanWithDetails(scanId: String): ScanWithDetails?
 
+    /** The latest completed scan of the same place before [before], for "since your last scan". */
+    @Query("SELECT * FROM scans WHERE status = 'COMPLETED' AND place_name = :place COLLATE NOCASE AND started_at < :before ORDER BY started_at DESC LIMIT 1")
+    suspend fun previousScanOf(place: String, before: Long): ScanEntity?
+
     @Query("UPDATE findings SET user_verdict = :verdict WHERE id = :findingId")
     suspend fun setVerdict(findingId: String, verdict: UserVerdict)
 

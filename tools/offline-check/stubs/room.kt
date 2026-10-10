@@ -20,7 +20,10 @@ annotation class TypeConverters(vararg val value: KClass<*>)
 annotation class TypeConverter
 abstract class RoomDatabase {
     val openHelper: androidx.sqlite.db.SupportSQLiteOpenHelper get() = TODO()
-    class Builder<T : RoomDatabase> { fun build(): T = TODO() }
+    class Builder<T : RoomDatabase> {
+        fun build(): T = TODO()
+        fun addMigrations(vararg migrations: androidx.room.migration.Migration): Builder<T> = this
+    }
 }
 object Room { fun <T : RoomDatabase> databaseBuilder(context: android.content.Context, klass: Class<T>, name: String): RoomDatabase.Builder<T> = TODO() }
 suspend fun <R> RoomDatabase.withTransaction(block: suspend () -> R): R = block()

@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.camsense.core.ModuleId
+import com.camsense.core.ScanMode
 import com.camsense.scoring.RiskLevel
 import java.util.UUID
 
@@ -24,6 +25,13 @@ data class ScanEntity(
     @ColumnInfo(name = "device_model") val deviceModel: String,
     @ColumnInfo(name = "app_version") val appVersion: String,
     @ColumnInfo(name = "cloud_report_id") val cloudReportId: String? = null,
+    // Added in version 2 (nullable, no default, so the migration is plain ALTER TABLE).
+    /** null on scans saved before version 2: treat as FULL. */
+    val mode: ScanMode? = ScanMode.FULL,
+    /** Share of the room the camera pointed at during the camera steps, 0–1. */
+    val coverage: Float? = null,
+    /** Compass heading (degrees) the phone pointed at when the camera steps began: "ahead" on the room map. */
+    @ColumnInfo(name = "start_yaw") val startYaw: Float? = null,
 )
 
 @Entity(
@@ -89,6 +97,13 @@ data class FindingEntity(
     @ColumnInfo(name = "network_device_id") val networkDeviceId: String? = null,
     @ColumnInfo(name = "user_verdict") val userVerdict: UserVerdict = UserVerdict.UNREVIEWED,
     @ColumnInfo(name = "created_at") val createdAt: Long,
+    // Added in version 2.
+    /** Compass heading (degrees) of the spot, for the room map; camera findings only. */
+    val yaw: Float? = null,
+    /** Up/down angle (degrees, up positive) of the spot. */
+    val pitch: Float? = null,
+    /** Wi-Fi IP/BSSID or Bluetooth address, for "remembered safe" devices. */
+    @ColumnInfo(name = "device_address") val deviceAddress: String? = null,
 )
 
 @Entity(

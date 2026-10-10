@@ -131,6 +131,25 @@ class ObjectsModule(private val detector: ObjectDetector) : BaseModule(ModuleId.
         }
     }
 
+    /**
+     * A finding the user reported by hand (the mirror fingertip test). Works even when
+     * the AI model isn't loaded or the room sweep wasn't part of the scan.
+     */
+    @Synchronized
+    fun addManualFinding(finding: Finding?) {
+        finding?.targetKey?.let { key ->
+            findingsByKey[key] = finding
+            nameByKey[key] = finding.reason.substringBefore(':').trim()
+        }
+        val findings = findingsByKey.values.toList()
+        state.value = ModuleResult(
+            moduleId = id,
+            status = ModuleResult.Status.DONE,
+            score = findings.maxOfOrNull { it.confidence } ?: 0f,
+            findings = findings,
+        )
+    }
+
     /** target_key of the object at this point of a recent frame, if any. Never blocks. */
     fun objectKeyAt(x: Float, y: Float): String? =
         ObjectTracker.pickAt(snapshot, x, y, ScanConfig.GLINT_OBJECT_MARGIN)?.key
@@ -140,7 +159,7 @@ class ObjectsModule(private val detector: ObjectDetector) : BaseModule(ModuleId.
     fun clearOverlay() { _overlay.value = CameraOverlay() }
 
     override fun stop() {
-        finish()
+        if (results.value.status == ModuleResult.Status.RUNNING) finish()
         worker?.shutdown()
         worker = null
     }

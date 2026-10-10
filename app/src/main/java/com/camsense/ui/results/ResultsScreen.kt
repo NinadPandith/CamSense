@@ -42,6 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.camsense.R
+import com.camsense.core.ScanMode
+import com.camsense.data.ScanDiff
 import com.camsense.data.db.UserVerdict
 import com.camsense.scoring.RiskLevel
 import com.camsense.ui.appContainer
@@ -49,6 +51,8 @@ import com.camsense.ui.components.CamSenseScreen
 import com.camsense.ui.components.ConfirmDialog
 import com.camsense.ui.components.PrimaryButton
 import com.camsense.ui.components.SecondaryButton
+import com.camsense.ui.components.TextAction
+import com.camsense.ui.components.shareFile
 import com.camsense.ui.components.formatTime
 import com.camsense.ui.components.icon
 import com.camsense.ui.components.label
@@ -69,7 +73,7 @@ fun ResultsScreen(
     readOnly: Boolean,
     onHome: () -> Unit,
     onBack: () -> Unit,
-    onScanAgain: (place: String?) -> Unit,
+    onScanAgain: (place: String?, mode: ScanMode) -> Unit,
     onCheckSpots: () -> Unit,
     onEvidence: () -> Unit,
     onGetHelp: () -> Unit,
@@ -102,6 +106,13 @@ fun ResultsScreen(
         onError = { Toast.makeText(context, R.string.evidence_storage_full, Toast.LENGTH_LONG).show() },
     )
 
+    val shareText = stringResource(R.string.share_report_text, state.placeName ?: stringResource(R.string.history_unnamed))
+    val shareTitle = stringResource(R.string.share_report_title)
+    fun shareReport() = vm.reportForSharing(
+        onReady = { shareFile(context, it, "application/pdf", shareText, shareTitle) },
+        onError = { Toast.makeText(context, R.string.evidence_storage_full, Toast.LENGTH_LONG).show() },
+    )
+
     CamSenseScreen(
         title = state.placeName ?: stringResource(R.string.history_unnamed),
         onBack = onBack,
@@ -116,10 +127,17 @@ fun ResultsScreen(
                 }
             }
         },
-        bottom = { Buttons(state, readOnly, onHome, onScanAgain, onCheckSpots, onEvidence, onGetHelp, ::saveEvidence) },
+        bottom = { Buttons(state, readOnly, onHome, onScanAgain, onCheckSpots, onEvidence, onGetHelp, ::saveEvidence, ::shareReport) },
     ) {
         RiskHeader(state)
         Text(formatTime(state.startedAt), style = CamSenseType.Caption, color = CamSenseColors.TextMuted)
+        if (state.mode == ScanMode.QUICK) {
+            Text(stringResource(R.string.results_quick_note), style = CamSenseType.Body, color = CamSenseColors.TextMuted)
+        }
+        state.coverage?.let { c ->
+            Text(stringResource(R.string.results_coverage, (c * 100).toInt()), style = CamSenseType.Caption,
+                color = CamSenseColors.TextMuted)
+        }
 
         Section(stringResource(R.string.results_why))
         if (state.findings.isEmpty()) {
@@ -133,6 +151,13 @@ fun ResultsScreen(
                 style = CamSenseType.Caption, color = CamSenseColors.TextMuted)
             state.findings.forEach { f -> FindingRow(f) { openFinding = f.id } }
         }
+
+        if (state.mapPoints.isNotEmpty()) {
+            Section(stringResource(R.string.map_title))
+            RoomMap(state.mapPoints)
+        }
+
+        state.sinceLast?.let { diff -> state.previousScanAt?.let { at -> SinceLastCard(at, diff) } }
 
         Section(stringResource(R.string.results_what_to_do))
         Text(stringResource(nextSteps(state.level)), style = CamSenseType.Body, color = CamSenseColors.Text)
@@ -153,7 +178,7 @@ fun ResultsScreen(
     }
 
     state.findings.firstOrNull { it.id == openFinding }?.let { f ->
-        FindingSheet(f, readOnly, onVerdict = { v -> vm.setVerdict(f.ids, v); openFinding = null }, onDismiss = { openFinding = null })
+        FindingSheet(f, readOnly, onVerdict = { v -> vm.setVerdict(f, v); openFinding = null }, onDismiss = { openFinding = null })
     }
     if (confirmDelete) {
         ConfirmDialog(
@@ -186,6 +211,21 @@ private fun RiskHeader(state: ResultsUi) {
         }
         Text(stringResource(summary(state.level)), style = CamSenseType.Body, color = CamSenseColors.Text)
     }
+}
+
+@Composable
+private fun SinceLastCard(previousAt: Long, diff: ScanDiff.Result) {
+    Section(stringResource(R.string.since_title, formatTime(previousAt)))
+    if (diff.total == 0) {
+        Text(stringResource(R.string.since_nothing_new), style = CamSenseType.Body, color = CamSenseColors.Text)
+        return
+    }
+    if (diff.newWifi > 0) Text(pluralStringResource(R.plurals.since_new_wifi, diff.newWifi, diff.newWifi),
+        style = CamSenseType.Body, color = CamSenseColors.Text)
+    if (diff.newHotspots > 0) Text(pluralStringResource(R.plurals.since_new_hotspots, diff.newHotspots, diff.newHotspots),
+        style = CamSenseType.Body, color = CamSenseColors.Text)
+    if (diff.newBluetooth > 0) Text(pluralStringResource(R.plurals.since_new_bluetooth, diff.newBluetooth, diff.newBluetooth),
+        style = CamSenseType.Body, color = CamSenseColors.Text)
 }
 
 @Composable
@@ -226,34 +266,46 @@ private fun Buttons(
     state: ResultsUi,
     readOnly: Boolean,
     onHome: () -> Unit,
-    onScanAgain: (String?) -> Unit,
+    onScanAgain: (String?, ScanMode) -> Unit,
     onCheckSpots: () -> Unit,
     onEvidence: () -> Unit,
     onGetHelp: () -> Unit,
     onSaveEvidence: () -> Unit,
+    onShareReport: () -> Unit,
 ) {
     if (readOnly) {
         when {
             state.evidenceSaved -> PrimaryButton(stringResource(R.string.results_evidence), onEvidence)
             state.level == RiskLevel.HIGH -> PrimaryButton(stringResource(R.string.results_save_evidence), onSaveEvidence)
         }
-        if (state.level == RiskLevel.HIGH) SecondaryButton(stringResource(R.string.results_get_help), onGetHelp)
+        if (state.level == RiskLevel.HIGH) {
+            SecondaryButton(stringResource(R.string.results_get_help), onGetHelp)
+            TextAction(stringResource(R.string.results_send_trusted), onShareReport)
+        }
+        return
+    }
+    if (state.mode == ScanMode.QUICK && state.level != RiskLevel.HIGH) {
+        // A quick check-in leaves out the infrared and close checks; offer the full scan.
+        if (state.level == RiskLevel.LOW) PrimaryButton(stringResource(R.string.results_done), onHome)
+        else PrimaryButton(stringResource(R.string.results_check_spots), onCheckSpots)
+        SecondaryButton(stringResource(R.string.results_full_scan), { onScanAgain(state.placeName, ScanMode.FULL) })
         return
     }
     when (state.level) {
         RiskLevel.LOW -> {
             PrimaryButton(stringResource(R.string.results_done), onHome)
-            SecondaryButton(stringResource(R.string.results_scan_another), { onScanAgain(null) })
+            SecondaryButton(stringResource(R.string.results_scan_another), { onScanAgain(null, state.mode) })
         }
         RiskLevel.MEDIUM -> {
             PrimaryButton(stringResource(R.string.results_check_spots), onCheckSpots)
-            SecondaryButton(stringResource(R.string.results_scan_again), { onScanAgain(state.placeName) })
+            SecondaryButton(stringResource(R.string.results_scan_again), { onScanAgain(state.placeName, state.mode) })
         }
         RiskLevel.HIGH -> {
             // Evidence is not saved until the user taps.
             if (state.evidenceSaved) PrimaryButton(stringResource(R.string.results_evidence), onEvidence)
             else PrimaryButton(stringResource(R.string.results_save_evidence), onSaveEvidence)
             SecondaryButton(stringResource(R.string.results_get_help), onGetHelp)
+            TextAction(stringResource(R.string.results_send_trusted), onShareReport)
         }
     }
 }

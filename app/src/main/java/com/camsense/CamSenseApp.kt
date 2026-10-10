@@ -2,6 +2,7 @@ package com.camsense
 
 import android.app.Application
 import android.util.Log
+import com.camsense.core.voice.VoiceGuide
 import com.camsense.data.EvidenceStore
 import com.camsense.data.ScanRepository
 import com.camsense.data.SettingsStore
@@ -31,6 +32,7 @@ class AppContainer(val app: Application) {
     val evidenceStore: EvidenceStore by lazy { EvidenceStore(app, database.evidenceDao()) }
     val repository: ScanRepository by lazy { ScanRepository(database, evidenceStore, appVersion) }
     val objectDetector: ObjectDetector by lazy { ObjectDetector(app) }
+    val voice: VoiceGuide by lazy { VoiceGuide(app, settings, appScope) }
     private val oui: OuiDatabase by lazy { OuiDatabase(app) }
 
     /** A fresh set of the six modules for each guided scan. */

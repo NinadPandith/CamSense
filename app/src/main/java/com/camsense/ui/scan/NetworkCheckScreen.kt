@@ -33,6 +33,7 @@ import com.camsense.modules.network.NetworkDevice
 import com.camsense.scoring.ScanConfig
 import com.camsense.ui.components.NoticeBanner
 import com.camsense.ui.components.ScanStepScreen
+import com.camsense.ui.components.SpeakOnEnter
 import com.camsense.ui.theme.CamSenseColors
 import com.camsense.ui.theme.CamSenseType
 
@@ -50,10 +51,13 @@ fun NetworkCheckScreen(vm: ScanViewModel, onContinue: () -> Unit, onAllowNearby:
     val lanSkip by vm.modules.network.lanSkip.collectAsState()
     val hotspots by vm.modules.network.hotspots.collectAsState()
 
+    val title = stringResource(R.string.network_title)
+    val instruction = stringResource(R.string.network_instruction)
+    SpeakOnEnter(title, instruction)
     ScanStepScreen(
-        step = 2,
-        title = stringResource(R.string.network_title),
-        instruction = stringResource(R.string.network_instruction),
+        step = ScanSteps.dotNumber(ScanStep.NETWORK),
+        title = title,
+        instruction = instruction,
         onStop = askStop,
         bottom = { TimedStepButton(stringResource(R.string.action_continue), ScanConfig.NETWORK_STEP_MIN_MS, onContinue) },
     ) {

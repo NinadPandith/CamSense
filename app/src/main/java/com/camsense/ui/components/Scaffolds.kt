@@ -134,6 +134,8 @@ fun CameraStepScreen(
     bottom: @Composable ColumnScope.() -> Unit,
     /** Debug builds only: frames/second, brightness, spots, for tuning on real phones. */
     debugLine: String? = null,
+    /** Room coverage ring, shown under the instruction. */
+    coverage: (@Composable () -> Unit)? = null,
 ) {
     val chromeAlpha = if (dim) 0.7f else 1f
     Box(Modifier.fillMaxSize().background(CamSenseColors.Background)) {
@@ -150,6 +152,9 @@ fun CameraStepScreen(
                 }
             }
             InstructionPill(instruction, Modifier.padding(horizontal = Spacing.screen).alpha(chromeAlpha))
+            if (coverage != null) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.xs)) { coverage() }
+            }
             Column(
                 Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.s),
                 verticalArrangement = Arrangement.spacedBy(Spacing.s),

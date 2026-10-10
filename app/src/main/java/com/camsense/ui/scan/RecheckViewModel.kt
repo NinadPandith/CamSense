@@ -7,6 +7,7 @@ import com.camsense.core.Spot
 import com.camsense.core.Spots
 import com.camsense.data.toModuleResults
 import com.camsense.modules.magnetometer.MagnetSweepModule
+import com.camsense.modules.magnetometer.hotColdFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 class RecheckViewModel(private val container: AppContainer, private val scanId: String) : ViewModel() {
 
     val magnet = MagnetSweepModule(container.app)
+    val hotCold = hotColdFlow(magnet.live, viewModelScope)
 
     private val _spots = MutableStateFlow<List<Spot>>(emptyList())
     val spots: StateFlow<List<Spot>> = _spots.asStateFlow()

@@ -32,8 +32,11 @@ fun FindingEntity.toFinding() = Finding(
     targetKey = targetKey,
     screenBox = if (boxLeft != null && boxTop != null && boxRight != null && boxBottom != null)
         NormRect(boxLeft, boxTop, boxRight, boxBottom) else null,
+    deviceAddress = deviceAddress,
     id = id,
     createdAt = createdAt,
+    yaw = yaw,
+    pitch = pitch,
 )
 
 fun ModuleResult.toRunEntity(scanId: String) = ModuleRunEntity(
@@ -68,6 +71,9 @@ fun Finding.toEntity(scanId: String, moduleRunId: String, networkDeviceId: Strin
     networkDeviceId = networkDeviceId,
     userVerdict = UserVerdict.UNREVIEWED,
     createdAt = createdAt,
+    yaw = yaw,
+    pitch = pitch,
+    deviceAddress = deviceAddress,
 )
 
 /** Modules whose score counts as "fired" (for reports and the Phase 3 cloud mapping). */

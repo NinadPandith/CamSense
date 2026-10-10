@@ -26,4 +26,5 @@ object Reasons {
         if (count == 1) BLE_STRONG_UNKNOWN else "$count unknown Bluetooth devices are very close"
     fun objectHidingSpot(objectName: String) = "$objectName: a common place to hide a camera"
     const val MAGNET = "Strong electronics signal near this spot"
+    const val MIRROR_NO_GAP = "Mirror: no gap in the fingertip test, so it may be a two-way mirror"
 }

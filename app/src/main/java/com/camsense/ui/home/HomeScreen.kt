@@ -31,7 +31,9 @@ import com.camsense.R
 import com.camsense.ui.appContainer
 import com.camsense.ui.components.CamSenseScreen
 import com.camsense.ui.components.ConfirmDialog
+import com.camsense.core.ScanMode
 import com.camsense.ui.components.PrimaryButton
+import com.camsense.ui.components.SecondaryButton
 import com.camsense.ui.components.ScanRow
 import com.camsense.ui.components.TextAction
 import com.camsense.ui.theme.CamSenseColors
@@ -41,11 +43,17 @@ private const val LOW_BATTERY_PERCENT = 10
 
 /** The hub: start a scan, see recent scans, open History or Settings. */
 @Composable
-fun HomeScreen(onStartScan: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onOpenScan: (String) -> Unit) {
+fun HomeScreen(onStartScan: (ScanMode) -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onOpenScan: (String) -> Unit) {
     val context = LocalContext.current
     val container = appContainer()
     val recent by remember { container.repository.observeRecent(3) }.collectAsState(initial = emptyList())
-    var lowBattery by remember { mutableStateOf(false) }
+    /** Scan type waiting for the low-battery answer. */
+    var lowBatteryFor by remember { mutableStateOf<ScanMode?>(null) }
+    fun start(mode: ScanMode) {
+        val battery = context.getSystemService(BatteryManager::class.java)
+            ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
+        if (battery in 0 until LOW_BATTERY_PERCENT) lowBatteryFor = mode else onStartScan(mode)
+    }
 
     CamSenseScreen(
         title = stringResource(R.string.app_name),
@@ -58,11 +66,10 @@ fun HomeScreen(onStartScan: () -> Unit, onHistory: () -> Unit, onSettings: () ->
             }
         },
         bottom = {
-            PrimaryButton(stringResource(R.string.home_start), onClick = {
-                val battery = context.getSystemService(BatteryManager::class.java)
-                    ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
-                if (battery in 0 until LOW_BATTERY_PERCENT) lowBattery = true else onStartScan()
-            })
+            PrimaryButton(stringResource(R.string.home_start), onClick = { start(ScanMode.FULL) })
+            SecondaryButton(stringResource(R.string.home_quick), onClick = { start(ScanMode.QUICK) })
+            TextAction(stringResource(R.string.home_small_room), { start(ScanMode.SMALL_ROOM) },
+                Modifier.align(Alignment.CenterHorizontally))
         },
     ) {
         Spacer(Modifier.height(24.dp))
@@ -81,14 +88,14 @@ fun HomeScreen(onStartScan: () -> Unit, onHistory: () -> Unit, onSettings: () ->
         }
     }
 
-    if (lowBattery) {
+    lowBatteryFor?.let { mode ->
         ConfirmDialog(
             title = stringResource(R.string.battery_low_title),
             body = stringResource(R.string.battery_low_body),
             confirm = stringResource(R.string.battery_low_start),
             dismiss = stringResource(R.string.action_not_now),
-            onConfirm = { lowBattery = false; onStartScan() },
-            onDismiss = { lowBattery = false },
+            onConfirm = { lowBatteryFor = null; onStartScan(mode) },
+            onDismiss = { lowBatteryFor = null },
         )
     }
 }

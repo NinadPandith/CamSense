@@ -18,6 +18,23 @@ Risk = Σ weight × score + 0.2 when two modules flag the same object, capped at
 On top of that, a confirmed video stream on the Wi-Fi means at least High, and a
 strong lens glint at least Medium (see `scoring/RiskEngine.kt`).
 
+## Extra features
+
+- **Three scan types:** full scan; quick check-in (Wi-Fi, Bluetooth, lens, about a
+  minute); bathroom or changing room (adds a mirror fingertip test, no room sweep).
+- **Room coverage meter:** the rotation-vector sensor tracks where the camera pointed;
+  a ring shows % checked and says which way to turn.
+- **Room map:** Results places each flagged spot around where you stood ("Behind, to
+  the left").
+- **PDF report:** saved with the evidence (annotated photos, devices, SHA-256 hashes),
+  shared through the Android share sheet. High results offer "Send to someone I trust".
+- **Spoken guidance:** offline TextToSpeech in English, turned on in Settings.
+- **Hot–cold finder:** the close check says warmer, colder, or that you passed the
+  strongest point.
+- **Learns safe devices:** "Checked, it's fine" on a Wi-Fi or Bluetooth finding stops
+  later scans flagging that device. Settings can forget them.
+- **Since last time:** a scan of a place you scanned before lists new devices.
+
 Docs: [PRD](docs/prd.md) · [App flow](docs/app-flow.md) · [Tech stack](docs/tech-stack.md) ·
 [Content guidelines](docs/content-guidelines.md) · [Backend schema](docs/backend-schema.md) ·
 [Implementation plan](docs/implementation-plan.md)

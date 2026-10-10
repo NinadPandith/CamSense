@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -18,6 +19,32 @@ class SettingsStore(private val context: Context) {
     private object Keys {
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val IR_SUPPORTED = booleanPreferencesKey("ir_supported")
+        val VOICE_GUIDANCE = booleanPreferencesKey("voice_guidance")
+        val SAFE_DEVICES = stringSetPreferencesKey("safe_devices")
+    }
+
+    /** Spoken guidance during scans; off until the user turns it on in Settings. */
+    val voiceGuidance: Flow<Boolean> = context.dataStore.data.map { it[Keys.VOICE_GUIDANCE] ?: false }
+
+    suspend fun setVoiceGuidance(on: Boolean) {
+        context.dataStore.edit { it[Keys.VOICE_GUIDANCE] = on }
+    }
+
+    /** Signatures of devices marked "Checked, it's fine" (see SafeDevices). */
+    val safeDevices: Flow<Set<String>> = context.dataStore.data.map { it[Keys.SAFE_DEVICES] ?: emptySet() }
+
+    suspend fun rememberSafe(signatures: Collection<String>) {
+        if (signatures.isEmpty()) return
+        context.dataStore.edit { it[Keys.SAFE_DEVICES] = (it[Keys.SAFE_DEVICES] ?: emptySet()) + signatures }
+    }
+
+    suspend fun forgetSafe(signatures: Collection<String>) {
+        if (signatures.isEmpty()) return
+        context.dataStore.edit { it[Keys.SAFE_DEVICES] = (it[Keys.SAFE_DEVICES] ?: emptySet()) - signatures.toSet() }
+    }
+
+    suspend fun clearSafe() {
+        context.dataStore.edit { it.remove(Keys.SAFE_DEVICES) }
     }
 
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[Keys.ONBOARDING_DONE] ?: false }
