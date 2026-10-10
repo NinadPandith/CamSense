@@ -4,6 +4,7 @@
 /.idea/
 .DS_Store
 /build/
+.kotlin/
 /app/build/
 /captures/
 .externalNativeBuild/
@@ -19,10 +20,6 @@ ml/dataset/
 prototype/clips/
 *.pt
 
-# offline check
-tools/offline-check/libs/
-tools/offline-check/build/
-tools/offline-check/.gradle/
-tools/offline-check/.kotlin/
+# run.bat logs
 build-log.txt
 app-log.txt

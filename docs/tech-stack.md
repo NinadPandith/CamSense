@@ -14,7 +14,7 @@ Build CamSense as a native Android app in Kotlin with Jetpack Compose. Flutter i
 | Run the AI model on live frames | Official Android runtime, GPU support | Plugins exist but lag behind and add a layer to debug |
 | Magnetometer, BLE, raw sockets | Built-in Android APIs | Plugins, some unmaintained |
 | iOS later | Rewrite needed | Shared code, but iOS blocks most scans anyway |
-| Vibe coding | AI tools know CameraX, OpenCV and Compose well; errors point to your own code | Errors often surface inside plugins, harder for AI tools to fix |
+| Debugging | Errors point to your own code | Errors often surface inside plugins |
 
 **Result:** Flutter would mean writing most of the hard parts in Kotlin anyway, plus a bridge. Kotlin removes that layer.
 
@@ -39,7 +39,6 @@ Every MVP feature uses free, open-source tools and runs offline on the phone. Ve
 | Settings | DataStore (Preferences) | androidx.datastore |
 | Build config | Gradle Kotlin DSL + version catalog (libs.versions.toml) | Template default |
 | Version control | Git + GitHub (private repo) | n/a |
-| AI coding | Claude Code | n/a |
 
 **Update to the PRD:** the PRD names YOLOv8-nano. Use YOLO26-nano instead. It is Ultralytics' current model, has no NMS step (simpler Android code) and is faster on CPU. If its export gives trouble, fall back to YOLO11-nano with the same pipeline.
 
@@ -62,7 +61,7 @@ Each module maps to a small set of APIs; only M1, M2 and M6 need third-party lib
 | Scan history | Room | One table for scans, one for findings |
 | Vendor lookup data | IEEE OUI list (CSV), bundled in assets | Trimmed to camera and IoT chip makers to keep size small |
 
-**Rule for vibe coding:** add a library only when a module needs it, and never let the AI add one silently. Ask it to name every new dependency and why.
+**Dependency rule:** add a library only when a module needs it, and note why it was added.
 
 ## Android permissions and platform limits
 
@@ -93,10 +92,9 @@ The magnetometer needs no permission. Ask for Bluetooth and local network togeth
 
 ## Project folder structure
 
-One Git repo holds the Android app, the Python prototypes and the model-training code, with one folder per detection module so the AI only touches the module it is working on.
+One Git repo holds the Android app, the Python prototypes and the model-training code, with one folder per detection module so each module can be built and tested on its own.
 
 camsense/\
-├── CLAUDE.md \# project brief for the AI coding assistant\
 ├── README.md\
 ├── gradle/libs.versions.toml \# every dependency version, pinned\
 ├── app/\
@@ -229,31 +227,17 @@ model.export(format="litert", imgsz=640, quantize=8, data="data.yaml")
 
 ## Development environment setup
 
-One person sets up the repo on day 1; everyone else clones it and follows steps 1–3 and 7.
-
-1.  **Install tools:** Android Studio (latest stable), Git, Python 3.11+, and Claude Code.
+1.  **Install tools:** Android Studio (latest stable), Git and Python 3.11+.
 
 2.  **Prepare the test phone:** enable Developer options, turn on USB debugging (or wireless debugging), and connect it to Android Studio.
 
 3.  **Prepare the "spy camera" phone:** install IP Webcam or DroidCam on the old phone and connect both phones to the same hotspot.
 
-4.  **Create the project:** New Project → Empty Activity (Compose), package com.camsense, language Kotlin, minimum SDK API 29, build config Kotlin DSL.
-
-5.  **Add dependencies** to gradle/libs.versions.toml and app/build.gradle.kts: CameraX 1.6.2 (core, camera2, lifecycle, compose), OpenCV, LiteRT, Room, DataStore, kotlinx.serialization.
-
-6.  **Add the manifest permissions** from the permissions section, then run the empty app on the phone to confirm the build works.
-
-7.  **Set up Python:** in prototype/ and ml/, create a virtual environment and install opencv-python, numpy and ultralytics.
-
-8.  **Create CLAUDE.md** from the template in the next section and commit everything to a private GitHub repo.
+4.  **Set up Python:** in prototype/ and ml/, create a virtual environment and install the packages in requirements.txt.
 
 **Minimum laptop:** 8 GB RAM works; 16 GB makes Android Studio much smoother. Model training runs in Colab, so no GPU is needed.
 
-## Coding conventions and vibe-coding workflow
-
-The rules below keep AI-written code consistent and explainable; the CLAUDE.md file puts them in front of the AI at the start of every session.
-
-**Conventions**
+## Coding conventions
 
 - Kotlin official style; Android Studio's formatter on save.
 
@@ -267,43 +251,7 @@ The rules below keep AI-written code consistent and explainable; the CLAUDE.md f
 
 - No network calls to the internet; only the local subnet.
 
-- Log with a tag per module (e.g. "CamSense/Glint") so errors are easy to paste back to the AI.
-
-**Session workflow**
-
-1.  Start each session by naming one module and one goal ("Build BlobTracker for M1 with unit tests").
-
-2.  Ask the AI to plan first and list files it will touch; approve before it writes code.
-
-3.  Build and run on the phone after every change.
-
-4.  Paste exact error messages and Logcat lines back to the AI.
-
-5.  When it works, ask the AI to explain the code, then commit with a clear message.
-
-**Git branches:** main always builds; one branch per module (e.g. feature/glint); merge only after it runs on a real phone.
-
-**CLAUDE.md template**
-
-\# CamSense\
-Android app (Kotlin, Jetpack Compose) that detects hidden cameras using only\
-phone sensors. Full requirements: PRD. Stack: Tech Stack doc.\
-\
-\## Rules\
-- Kotlin + Compose + MVVM. Manual DI via AppContainer in CamSenseApp.kt.\
-- minSdk 29. Run everything on-device; never call the internet.\
-- Each detection module lives in modules/\<name\>/ and implements\
-core/DetectionModule.kt. Do not change that interface without asking.\
-- Put all thresholds and weights in scoring/ScanConfig.kt.\
-- Name any new dependency and why before adding it to libs.versions.toml.\
-- Plan first, list files you will change, then wait for approval.\
-- Write unit tests for pure logic (trackers, scoring, post-processing).\
-\
-\## Current focus\
-\<module and goal for this session\>\
-\
-\## Known issues\
-\<paste open bugs here\>
+- Log with a tag per module (e.g. "CamSense/Glint").
 
 ## Testing tools
 

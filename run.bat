@@ -85,7 +85,7 @@ echo.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "& '.\gradlew.bat' installDebug --console=plain 2>&1 | Tee-Object -FilePath 'build-log.txt'; exit $LASTEXITCODE"
 if errorlevel 1 (
     echo.
-    echo  [X] Build failed. Send build-log.txt to Claude
+    echo  [X] Build failed. See build-log.txt for details
     echo      If it says INSTALL_FAILED_USER_RESTRICTED, turn on "Install via USB"
     echo      in Developer options ^(Xiaomi, Oppo, Vivo phones^).
     echo      ^(the most useful part is near the words "What went wrong"^).
@@ -100,7 +100,7 @@ echo.
 echo  [OK] CamSense is installed and open on your phone.
 echo.
 echo  Showing CamSense log messages below (also saved to app-log.txt).
-echo  If something goes wrong, send app-log.txt to Claude.
+echo  If something goes wrong, check app-log.txt.
 echo  Close this window when you're done.
 echo.
 "%ADB%" logcat -c

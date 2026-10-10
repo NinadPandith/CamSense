@@ -22,7 +22,7 @@ CamSense is an Android app that detects hidden cameras in a room using only the 
 
 6.  AI detection of objects commonly used to hide cameras
 
-**Project context.** Student project built largely with AI-assisted coding ("vibe coding"). The demo uses an old Android phone running a streaming app as a simulated Wi-Fi spy camera, so no hardware purchase is required.
+**Project context.** Student project. The demo uses an old Android phone running a streaming app as a simulated Wi-Fi spy camera, so no hardware purchase is required.
 
 ## Goals, non-goals and success metrics
 
@@ -267,7 +267,6 @@ The rear camera feeds two modules (glint and AI objects); each other sensor feed
 | Local storage | Room database for history; app-private folder for evidence photos |
 | Prototyping | Python + OpenCV on a laptop webcam to tune glint and IR thresholds |
 | Model training | Python, Ultralytics YOLOv8, Google Colab, Roboflow for labelling |
-| AI coding assistant | Claude Code, one module per session |
 
 ## AI model and dataset plan
 
@@ -337,7 +336,6 @@ If Gate 2 slips, cut Bluetooth and scan history first; the glint, network and AI
 | Front cameras on some phones block IR | IR module unusable | Calibration step detects this and skips the module |
 | Magnetometer noise from phone case, metal furniture | False spikes | Baseline calibration; confirmation-only weight |
 | Small custom dataset | Lower AI accuracy | Start from public datasets; heavy augmentation |
-| Vibe-coded code the team cannot explain | Weak viva or judging | Ask the AI to explain each module; team reviews and documents every module |
 | App misused to scan others' networks | Ethical and legal concerns | Scan only the network the user is on; read-only checks; no login attempts |
 
 ## Open questions
