@@ -133,16 +133,16 @@ class ResultsViewModel(private val container: AppContainer, private val scanId: 
                     d.banner?.let { append("\n").append(it) }
                 }
             }
-            val signature = when (module) {
-                ModuleId.NETWORK -> f.networkDeviceId?.let(deviceById::get)?.let { d ->
+            val signatures = when (module) {
+                ModuleId.NETWORK -> listOfNotNull(f.networkDeviceId?.let(deviceById::get)?.let { d ->
                     if (SafeDevices.isHotspotAddress(d.ip)) SafeDevices.hotspot(d.ip)
                     else SafeDevices.lan(d.ip, d.mdnsName, d.ssdpServer, d.banner)
-                }
-                ModuleId.BLE -> f.deviceAddress?.let(SafeDevices::ble)
-                else -> null
+                })
+                ModuleId.BLE -> SafeDevices.addresses(f.deviceAddress).map(SafeDevices::ble)
+                else -> emptyList()
             }
             FindingUi(f.id, module, f.reason, f.confidence, f.userVerdict, snap, technical,
-                yaw = f.yaw, pitch = f.pitch, signatures = listOfNotNull(signature))
+                yaw = f.yaw, pitch = f.pitch, signatures = signatures)
         }.let(FindingGroups::group)
         val startYaw = scan.startYaw
         val mapPoints = if (startYaw == null) emptyList() else findingsUi.filter { it.yaw != null }

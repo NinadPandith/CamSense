@@ -178,7 +178,16 @@ fun ResultsScreen(
     }
 
     state.findings.firstOrNull { it.id == openFinding }?.let { f ->
-        FindingSheet(f, readOnly, onVerdict = { v -> vm.setVerdict(f, v); openFinding = null }, onDismiss = { openFinding = null })
+        FindingSheet(f, readOnly, onVerdict = { v ->
+            vm.setVerdict(f, v)
+            openFinding = null
+            // Say that the device is remembered; light spots aren't, so they get no message.
+            if (v == UserVerdict.CHECKED_OK && f.signatures.isNotEmpty()) {
+                val n = f.signatures.size
+                Toast.makeText(context, context.resources.getQuantityString(R.plurals.safe_remembered, n, n),
+                    Toast.LENGTH_LONG).show()
+            }
+        }, onDismiss = { openFinding = null })
     }
     if (confirmDelete) {
         ConfirmDialog(

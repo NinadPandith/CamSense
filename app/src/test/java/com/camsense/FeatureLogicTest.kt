@@ -78,12 +78,32 @@ class FeatureLogicTest {
             ModuleResult(ModuleId.GLINT, ModuleResult.Status.DONE, 0.8f, listOf(Finding("glint", 0.8f, "glint-1"))),
         )
         val safe = setOf(SafeDevices.lan("192.168.1.30", "tv", null, null))
-        val (out, dropped) = SafeDevices.filter(results, safe) { _, f ->
-            if (f.deviceAddress == "192.168.1.30") SafeDevices.lan("192.168.1.30", "TV", null, null) else null
+        val (out, dropped) = SafeDevices.filter(results, safe) { _, address ->
+            if (address == "192.168.1.30") SafeDevices.lan("192.168.1.30", "TV", null, null) else null
         }
         assertEquals(1, dropped)
         assertEquals(0.3f, out[0].score, 0f)
         assertEquals(results[1], out[1]) // camera findings untouched
+    }
+
+    @Test
+    fun groupedBluetoothFindingKeepsOnlyDevicesNotMarkedSafe() {
+        val group = Finding("3 unknown", 0.5f, null, deviceAddress = "AA:01, AA:02,AA:03")
+        val results = listOf(ModuleResult(ModuleId.BLE, ModuleResult.Status.DONE, 0.5f, listOf(group)))
+        val regroup = { f: Finding, left: List<String> ->
+            f.copy(reason = "${left.size} unknown", deviceAddress = SafeDevices.joinAddresses(left))
+        }
+
+        val one = SafeDevices.filter(results, setOf(SafeDevices.ble("aa:02")), regroup) { _, a -> SafeDevices.ble(a) }
+        assertEquals(0, one.second)
+        assertEquals("2 unknown", one.first[0].findings.single().reason)
+        assertEquals("AA:01,AA:03", one.first[0].findings.single().deviceAddress)
+
+        val all = setOf("AA:01", "AA:02", "AA:03").map(SafeDevices::ble).toSet()
+        val none = SafeDevices.filter(results, all, regroup) { _, a -> SafeDevices.ble(a) }
+        assertEquals(1, none.second)
+        assertTrue(none.first[0].findings.isEmpty())
+        assertEquals(0f, none.first[0].score, 0f)
     }
 
     @Test

@@ -224,7 +224,10 @@ class ScanViewModel(
             val stamped = modules.all.map { it.results.value }.map(::stampDirections)
             // Devices the user marked safe in earlier scans aren't flagged again.
             val safe = container.settings.safeDevices.first()
-            val (results, dropped) = SafeDevices.filter(stamped, safe, ::signatureOf)
+            val (results, dropped) = SafeDevices.filter(stamped, safe, regroup = { f, left ->
+                // "3 unknown Bluetooth devices" becomes "2 …" when one of them was marked safe.
+                f.copy(reason = Reasons.bleStrongUnknown(left.size), deviceAddress = SafeDevices.joinAddresses(left))
+            }, signatureOf = ::signatureOf)
             if (dropped > 0) Log.i(TAG, "Ignored $dropped finding(s) for devices marked safe before")
             val assessment = RiskEngine.assess(results)
             Log.i(TAG, "Scan $id ($mode): score ${assessment.score} ${assessment.level} (sum ${assessment.weightedSum}, agreement ${assessment.agreedTargets}, floor ${assessment.floorApplied})")
@@ -264,16 +267,14 @@ class ScanViewModel(
     }
 
     /** Signature of the device behind a Wi-Fi or Bluetooth finding (see SafeDevices). */
-    private fun signatureOf(module: ModuleId, f: Finding): String? {
-        val address = f.deviceAddress ?: return null
-        return when (module) {
+    private fun signatureOf(module: ModuleId, address: String): String? =
+        when (module) {
             ModuleId.BLE -> SafeDevices.ble(address)
             ModuleId.NETWORK -> if (SafeDevices.isHotspotAddress(address)) SafeDevices.hotspot(address)
                 else modules.network.devices.value.firstOrNull { it.ip == address }
                     ?.let { SafeDevices.lan(it.ip, it.mdnsName, it.serverText, it.banner) }
             else -> null
         }
-    }
 
     /** "Stop this scan?": saved as ABORTED and not shown in History. */
     fun abort() {

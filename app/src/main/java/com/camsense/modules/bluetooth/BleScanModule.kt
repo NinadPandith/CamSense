@@ -88,7 +88,8 @@ class BleScanModule(
             Finding(reason = it.reason ?: "", confidence = it.suspicionScore, targetKey = null, deviceAddress = it.address)
         } + listOfNotNull(unknown.takeIf { it.isNotEmpty() }?.let { list ->
             Finding(reason = Reasons.bleStrongUnknown(list.size), confidence = list.maxOf { it.suspicionScore },
-                targetKey = null, deviceAddress = list.first().address)
+                // Every address, comma-separated, so "Checked, it's fine" can remember all of them.
+                targetKey = null, deviceAddress = list.joinToString(",") { it.address })
         })
         publish(score = flagged.maxOfOrNull { it.suspicionScore } ?: 0f, findings = findings, done = done)
     }

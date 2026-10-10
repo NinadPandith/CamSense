@@ -336,4 +336,8 @@
     <string name="settings_forget_safe_title">Forget devices marked safe?</string>
     <string name="settings_forget_safe_body">Scans will flag them again until you mark them as checked.</string>
     <string name="action_forget">Forget</string>
+    <plurals name="safe_remembered">
+        <item quantity="one">Marked as fine. Later scans will skip this device.</item>
+        <item quantity="other">Marked as fine. Later scans will skip these %1$d devices.</item>
+    </plurals>
 </resources>
